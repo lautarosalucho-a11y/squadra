@@ -8,7 +8,7 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { MOVE_TASK, PROJECT_BOARD } from "../../graphql/operations";
+import { CREATE_TASK, MOVE_TASK, PROJECT_BOARD } from "../../graphql/operations";
 import type { GroupedTasks } from "../../types";
 import { BoardColumn } from "./BoardColumn";
 import { useProjectRealtime } from "../realtime/useProjectRealtime";
@@ -24,6 +24,7 @@ export function BoardView() {
     variables: { projectId },
   });
   const [, moveTask] = useMutation(MOVE_TASK);
+  const [, createTask] = useMutation(CREATE_TASK);
 
   // Copia local para actualización optimista al soltar.
   const [override, setOverride] = useState<GroupedTasks | null>(null);
@@ -71,6 +72,13 @@ export function BoardView() {
     }
   }
 
+  async function onCreate(sectionId: string | null, title: string) {
+    const res = await createTask({
+      input: { projectId, title, sectionId: sectionId ?? undefined },
+    });
+    if (!res.error) refetch({ requestPolicy: "network-only" });
+  }
+
   if (fetching && !board) return <Centered>Cargando tablero…</Centered>;
   if (error && !board)
     return (
@@ -93,7 +101,7 @@ export function BoardView() {
         }}
       >
         {groups.map((g) => (
-          <BoardColumn key={g.key ?? "__none__"} group={g} />
+          <BoardColumn key={g.key ?? "__none__"} group={g} onCreate={onCreate} />
         ))}
       </div>
     </DndContext>

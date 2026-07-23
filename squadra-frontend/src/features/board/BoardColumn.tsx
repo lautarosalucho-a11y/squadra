@@ -1,11 +1,26 @@
+import { type FormEvent, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { TaskCard } from "./TaskCard";
 import type { TaskGroup } from "../../types";
 
+interface Props {
+  group: TaskGroup;
+  onCreate?: (sectionId: string | null, title: string) => void;
+}
+
 /** Columna del Tablero = una sección. Zona droppable para el drag de tareas. */
-export function BoardColumn({ group }: { group: TaskGroup }) {
+export function BoardColumn({ group, onCreate }: Props) {
   const droppableId = group.key ?? "__none__";
   const { setNodeRef, isOver } = useDroppable({ id: droppableId });
+  const [title, setTitle] = useState("");
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    const t = title.trim();
+    if (!t || !onCreate) return;
+    onCreate(group.key, t);
+    setTitle("");
+  }
 
   return (
     <div
@@ -54,6 +69,29 @@ export function BoardColumn({ group }: { group: TaskGroup }) {
           group.tasks.map((t) => <TaskCard key={t.id} task={t} />)
         )}
       </div>
+
+      {onCreate && (
+        <form onSubmit={submit} style={{ padding: "var(--space-2) var(--space-1) 0" }}>
+          <input
+            value={title}
+            placeholder="＋ Añadir tarea"
+            aria-label="Nueva tarea"
+            onChange={(e) => setTitle(e.target.value)}
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              height: 34,
+              padding: "0 var(--space-2)",
+              fontSize: "var(--text-sm)",
+              border: "1px dashed var(--gray-300)",
+              borderRadius: "var(--radius-md)",
+              background: "transparent",
+              outline: "none",
+              fontFamily: "inherit",
+            }}
+          />
+        </form>
+      )}
     </div>
   );
 }
