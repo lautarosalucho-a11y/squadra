@@ -228,7 +228,7 @@ export function ListView() {
     setBoard((prev) =>
       prev ? { groups: prev.groups.map((g) => ({ ...g, tasks: patchTree(g.tasks, task.id, patch) })) } : prev,
     );
-    const res = await updateTask({ id: task.id, input: { ...patch, expectedVersion: task.version } });
+    const res = await updateTask({ id: task.id, input: { ...patch } });
     if (res.error) refetch({ requestPolicy: "network-only" });
   }
   async function onSetCf(taskId: string, field: CustomField, value: CustomFieldValue["value"] | null) {

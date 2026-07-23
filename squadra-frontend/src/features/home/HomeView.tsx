@@ -60,11 +60,9 @@ export function HomeView() {
     setTasks((prev) =>
       prev.map((t) => (t.id === task.id ? { ...t, status: done ? "done" : "todo" } : t)),
     );
-    const res = await updateTask({
-      id: task.id,
-      input: { status: done ? "done" : "todo", expectedVersion: task.version },
-    });
-    if (res.error) refetch({ requestPolicy: "network-only" });
+    // Sin expectedVersion: "completar" no debe fallar por conflicto de versión.
+    await updateTask({ id: task.id, input: { status: done ? "done" : "todo" } });
+    refetch({ requestPolicy: "network-only" });
   }
 
   return (
