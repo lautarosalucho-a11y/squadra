@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "urql";
 import { MY_PROJECTS, MY_TASKS, UPDATE_TASK } from "../../graphql/operations";
-import type { Task } from "../../types";
+import type { Task, TaskStatus } from "../../types";
 import { format, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -23,7 +23,7 @@ function greeting(): string {
 }
 
 export function HomeView() {
-  const [{ data }, refetch] = useQuery<TasksData>({ query: MY_TASKS });
+  const [{ data }] = useQuery<TasksData>({ query: MY_TASKS });
   const [{ data: projData }] = useQuery<ProjectsData>({ query: MY_PROJECTS });
   const [, updateTask] = useMutation(UPDATE_TASK);
 
@@ -57,12 +57,20 @@ export function HomeView() {
   const doneCount = buckets.done.length;
 
   async function toggleDone(task: Task, done: boolean) {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === task.id ? { ...t, status: done ? "done" : "todo" } : t)),
-    );
-    // Sin expectedVersion: "completar" no debe fallar por conflicto de versión.
-    await updateTask({ id: task.id, input: { status: done ? "done" : "todo" } });
-    refetch({ requestPolicy: "network-only" });
+    const next: "done" | "todo" = done ? "done" : "todo";
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: next } : t)));
+    const res = await updateTask({ id: task.id, input: { status: next } });
+    const updated = res.data?.updateTask as { id: string; status: TaskStatus; version: number } | undefined;
+    if (updated) {
+      // Fuente de verdad: lo que devolvió el servidor.
+      setTasks((prev) =>
+        prev.map((t) => (t.id === updated.id ? { ...t, status: updated.status, version: updated.version } : t)),
+      );
+    } else {
+      // Falló: revertir y avisar.
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: task.status } : t)));
+      alert("No se pudo actualizar la tarea: " + (res.error?.message ?? "error desconocido"));
+    }
   }
 
   return (
