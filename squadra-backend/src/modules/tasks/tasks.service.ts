@@ -42,7 +42,8 @@ export class TasksService {
         projectId: input.projectId,
         sectionId: input.sectionId ?? null,
         parentTaskId: input.parentTaskId ?? null,
-        assigneeId: input.assigneeId ?? null,
+        // Sin responsable explícito → se asigna al creador (aparece en "Mis tareas").
+        assigneeId: input.assigneeId ?? actorId,
         title: input.title,
         description: input.description ?? undefined,
         position,
