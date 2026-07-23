@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -27,7 +27,7 @@ export class NotificationsService {
 
   /**
    * Reacciona a cambios de tarea: notifica al responsable y a los seguidores
-   * (excepto al actor que originó el cambio).
+   * (excepto al actor que originÃ³ el cambio).
    */
   @OnEvent(TASK_CHANGED)
   async onTaskChanged(event: TaskChangedEvent): Promise<void> {
@@ -60,7 +60,7 @@ export class NotificationsService {
     }
   }
 
-  /** Crea una notificación y dispara el push por WebSocket. */
+  /** Crea una notificaciÃ³n y dispara el push por WebSocket. */
   async create(
     userId: string,
     type: NotifType,
@@ -68,7 +68,7 @@ export class NotificationsService {
     payload: unknown,
   ): Promise<void> {
     const notif = await this.prisma.notification.create({
-      data: { userId, type, taskId, payload },
+      data: { userId, type, taskId, payload: payload as any },
     });
     const evt: NotificationCreatedEvent = {
       userId,

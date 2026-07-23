@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateRuleInput } from './dto/create-rule.input';
@@ -94,12 +94,12 @@ export class AutomationsService {
     if (!task) return;
 
     for (const rule of rules) {
-      const trigger = rule.trigger as Trigger;
+      const trigger = rule.trigger as unknown as Trigger;
       if (!this.triggerMatches(trigger, event, task)) continue;
-      if (!this.conditionsPass((rule.conditions as Condition[]) ?? [], task)) {
+      if (!this.conditionsPass((rule.conditions as unknown as Condition[]) ?? [], task)) {
         continue;
       }
-      await this.runActions((rule.actions as Action[]) ?? [], task, event);
+      await this.runActions((rule.actions as unknown as Action[]) ?? [], task, event);
     }
   }
 
@@ -152,10 +152,10 @@ export class AutomationsService {
       try {
         await this.applyAction(action, task);
       } catch (e) {
-        this.logger.error(`Acción ${action.type} falló: ${String(e)}`);
+        this.logger.error(`AcciÃ³n ${action.type} fallÃ³: ${String(e)}`);
       }
     }
-    // Reemite el cambio (para UI en vivo) marcado como automation → sin re-disparar reglas
+    // Reemite el cambio (para UI en vivo) marcado como automation â†’ sin re-disparar reglas
     const evt: TaskChangedEvent = {
       type: 'updated',
       projectId: task.projectId,
@@ -187,7 +187,7 @@ export class AutomationsService {
       case 'set_status':
         await this.prisma.task.update({
           where: { id: task.id },
-          data: { status: action.status, version: { increment: 1 } },
+          data: { status: action.status as any, version: { increment: 1 } },
         });
         break;
       case 'add_comment':
@@ -200,7 +200,7 @@ export class AutomationsService {
         });
         break;
       default:
-        this.logger.warn(`Acción desconocida: ${action.type}`);
+        this.logger.warn(`AcciÃ³n desconocida: ${action.type}`);
     }
   }
 }
