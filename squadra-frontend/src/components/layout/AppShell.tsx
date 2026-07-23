@@ -7,6 +7,7 @@ import { disconnectSocket } from "../../lib/socket";
 import { useSocketStatus } from "../../features/realtime/useSocketStatus";
 import { InboxButton } from "../../features/inbox/InboxButton";
 import { TaskDetailPanel } from "../../features/comments/TaskDetailPanel";
+import { CreateMenu } from "./CreateMenu";
 import { Button } from "../ui";
 
 function ProjectNav({ projectId, onPick }: { projectId: string; onPick: (id: string) => void }) {
@@ -101,6 +102,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div style={{ fontSize: "var(--text-xl)", fontWeight: 700, color: "var(--brand-600)" }}>
           Squadra
         </div>
+        <CreateMenu />
         <button
           type="button"
           onClick={() => navigate("/")}
