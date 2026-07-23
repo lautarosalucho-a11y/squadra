@@ -1,0 +1,508 @@
+// =============================================================================
+// Proyecto Squadra — Schema Prisma
+// Gestión de proyectos colaborativa (inspirado en Asana)
+//
+// Adaptaciones para clientes móviles (sync offline-first):
+//   · updatedAt  → delta-sync incremental  (WHERE updatedAt > lastSync)
+//   · deletedAt  → soft-delete sincronizable (tombstones para el cliente)
+//   · version    → optimistic concurrency (resolución de conflictos offline)
+//   · UUID PK    → el cliente genera IDs sin conexión (cuid/uuid v4)
+//   · Device / SyncCursor → push notifications y checkpoint por dispositivo
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================ ENUMS =========================================
+
+enum MembershipRole {
+  owner
+  admin
+  member
+  guest
+}
+
+enum TaskStatus {
+  todo
+  in_progress
+  in_review
+  done
+  blocked
+}
+
+enum CustomFieldType {
+  text
+  number
+  dropdown
+}
+
+enum NotificationType {
+  mention
+  assignment
+  comment
+  due_soon
+  status_changed
+  dependency
+}
+
+enum DevicePlatform {
+  ios
+  android
+  web
+}
+
+// ======================= JERARQUÍA ORGANIZATIVA =============================
+
+model Workspace {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  memberships     Membership[]
+  portfolios      Portfolio[]
+  projects        Project[]
+  users           User[]           @relation("WorkspaceUsers")
+  tasks           Task[]
+  automationRules AutomationRule[]
+  goals           Goal[]
+
+  @@index([slug])
+  @@index([updatedAt])
+  @@map("workspaces")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  fullName     String
+  avatarUrl    String?
+  passwordHash String? // null para usuarios SSO/OIDC
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+
+  // Workspace primario del usuario; participa en otros vía Membership
+  homeWorkspaceId String?    @db.Uuid
+  homeWorkspace   Workspace? @relation("WorkspaceUsers", fields: [homeWorkspaceId], references: [id], onDelete: SetNull)
+
+  memberships     Membership[]
+  ownedPortfolios Portfolio[]        @relation("PortfolioOwner")
+  ownedGoals      Goal[]             @relation("GoalOwner")
+  assignedTasks   Task[]             @relation("TaskAssignee")
+  createdTasks    Task[]             @relation("TaskCreatedBy")
+  collaborations  TaskCollaborator[]
+  following       TaskFollower[]
+  comments        Comment[]
+  mentions        CommentMention[]
+  activities      ActivityLog[]
+  notifications   Notification[]
+  uploads         Attachment[]
+  devices         Device[]
+  syncCursors     SyncCursor[]
+  refreshTokens   RefreshToken[]
+
+  @@index([email])
+  @@index([updatedAt])
+  @@map("users")
+}
+
+// Refresh tokens rotativos (revocables). Se guarda solo el hash del token.
+// Vinculado opcionalmente a un dispositivo para sesiones móviles multi-device.
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  deviceId  String?   @db.Uuid
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Membership {
+  workspaceId String         @db.Uuid
+  userId      String         @db.Uuid
+  role        MembershipRole @default(member)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([workspaceId, userId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+model Portfolio {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @db.Uuid
+  name        String
+  ownerId     String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  version     Int       @default(1)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  owner     User?     @relation("PortfolioOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  projects  Project[]
+
+  @@index([workspaceId])
+  @@index([updatedAt])
+  @@map("portfolios")
+}
+
+enum GoalStatus {
+  on_track
+  at_risk
+  off_track
+  achieved
+}
+
+// Objetivos (Estrategia): metas del workspace con progreso 0–100.
+model Goal {
+  id          String     @id @default(uuid()) @db.Uuid
+  workspaceId String     @db.Uuid
+  title       String
+  description String?
+  ownerId     String?    @db.Uuid
+  status      GoalStatus @default(on_track)
+  progress    Int        @default(0) // 0–100
+  dueDate     DateTime?  @db.Date
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  deletedAt   DateTime?
+  version     Int        @default(1)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  owner     User?     @relation("GoalOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([updatedAt])
+  @@map("goals")
+}
+
+model Project {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @db.Uuid
+  portfolioId String?   @db.Uuid
+  name        String
+  description String?
+  defaultView String    @default("list") // list | board | calendar | gantt
+  archived    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  version     Int       @default(1)
+
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  portfolio       Portfolio?       @relation(fields: [portfolioId], references: [id], onDelete: SetNull)
+  sections        Section[]
+  tasks           Task[]
+  customFields    CustomField[]
+  automationRules AutomationRule[]
+
+  @@index([workspaceId])
+  @@index([portfolioId])
+  @@index([updatedAt])
+  @@map("projects")
+}
+
+model Section {
+  id        String    @id @default(uuid()) @db.Uuid
+  projectId String    @db.Uuid
+  name      String
+  position  Float // orden fraccional para drag & drop
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  @@index([projectId])
+  @@index([updatedAt])
+  @@map("sections")
+}
+
+// ============================ MOTOR DE TAREAS ===============================
+
+model Task {
+  id           String     @id @default(uuid()) @db.Uuid
+  workspaceId  String     @db.Uuid
+  projectId    String     @db.Uuid
+  sectionId    String?    @db.Uuid
+  parentTaskId String?    @db.Uuid // subtareas: N niveles
+  title        String
+  description  Json? // rich text (ProseMirror/Tiptap doc)
+  assigneeId   String?    @db.Uuid // responsable único
+  status       TaskStatus @default(todo)
+  startDate    DateTime?  @db.Date
+  dueDate      DateTime?  @db.Date
+  position     Float // orden dentro de la sección
+  completedAt  DateTime?
+  createdById  String?    @db.Uuid
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  version   Int       @default(1)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  section   Section?  @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  parent    Task?     @relation("TaskSubtasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
+  subtasks  Task[]    @relation("TaskSubtasks")
+  assignee  User?     @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdBy User?     @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  collaborators     TaskCollaborator[]
+  followers         TaskFollower[]
+  customFieldValues CustomFieldValue[]
+  blocking          TaskDependency[]   @relation("Blocker")
+  blockedBy         TaskDependency[]   @relation("Blocked")
+  comments          Comment[]
+  attachments       Attachment[]
+  activities        ActivityLog[]
+  notifications     Notification[]
+
+  @@index([projectId])
+  @@index([sectionId])
+  @@index([parentTaskId])
+  @@index([assigneeId])
+  @@index([dueDate])
+  @@index([workspaceId, updatedAt]) // delta-sync por workspace
+  @@map("tasks")
+}
+
+model TaskCollaborator {
+  taskId String @db.Uuid
+  userId String @db.Uuid
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@index([userId])
+  @@map("task_collaborators")
+}
+
+model TaskFollower {
+  taskId String @db.Uuid
+  userId String @db.Uuid
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@index([userId])
+  @@map("task_followers")
+}
+
+// Dependencias: blocker bloquea a blocked
+model TaskDependency {
+  blockerTaskId String   @db.Uuid
+  blockedTaskId String   @db.Uuid
+  createdAt     DateTime @default(now())
+
+  blocker Task @relation("Blocker", fields: [blockerTaskId], references: [id], onDelete: Cascade)
+  blocked Task @relation("Blocked", fields: [blockedTaskId], references: [id], onDelete: Cascade)
+
+  @@id([blockerTaskId, blockedTaskId])
+  @@index([blockedTaskId])
+  @@map("task_dependencies")
+}
+
+model Attachment {
+  id           String    @id @default(uuid()) @db.Uuid
+  taskId       String    @db.Uuid
+  fileName     String
+  storageKey   String // clave en S3
+  mimeType     String?
+  sizeBytes    BigInt?
+  uploadedById String?   @db.Uuid
+  createdAt    DateTime  @default(now())
+  deletedAt    DateTime?
+
+  task       Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedBy User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([taskId])
+  @@map("attachments")
+}
+
+// ========================= CAMPOS PERSONALIZADOS ===========================
+
+model CustomField {
+  id        String          @id @default(uuid()) @db.Uuid
+  projectId String          @db.Uuid
+  name      String
+  type      CustomFieldType
+  options   Json? // [{ id, label, color }] para dropdown
+  position  Float
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  deletedAt DateTime?
+
+  project Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  values  CustomFieldValue[]
+
+  @@index([projectId])
+  @@map("custom_fields")
+}
+
+model CustomFieldValue {
+  taskId        String   @db.Uuid
+  customFieldId String   @db.Uuid
+  value         Json? // { text } | { number } | { optionId }
+  updatedAt     DateTime @updatedAt
+
+  task        Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  customField CustomField @relation(fields: [customFieldId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, customFieldId])
+  @@index([customFieldId])
+  @@map("custom_field_values")
+}
+
+// ========================= COLABORACIÓN Y EVENTOS ==========================
+
+model Comment {
+  id        String    @id @default(uuid()) @db.Uuid
+  taskId    String    @db.Uuid
+  authorId  String    @db.Uuid
+  body      Json // rich text con menciones embebidas
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  task     Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author   User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  mentions CommentMention[]
+
+  @@index([taskId])
+  @@index([updatedAt])
+  @@map("comments")
+}
+
+model CommentMention {
+  commentId String @db.Uuid
+  userId    String @db.Uuid
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([commentId, userId])
+  @@index([userId])
+  @@map("comment_mentions")
+}
+
+// Auditoría: quién cambió qué y cuándo
+model ActivityLog {
+  id        BigInt   @id @default(autoincrement())
+  taskId    String   @db.Uuid
+  actorId   String?  @db.Uuid
+  action    String // created | status_changed | assigned | ...
+  field     String?
+  oldValue  Json?
+  newValue  Json?
+  createdAt DateTime @default(now())
+
+  task  Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([taskId, createdAt])
+  @@map("activity_log")
+}
+
+// Inbox centralizado
+model Notification {
+  id        BigInt           @id @default(autoincrement())
+  userId    String           @db.Uuid
+  taskId    String?          @db.Uuid
+  type      NotificationType
+  payload   Json?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task? @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@map("notifications")
+}
+
+// ============================ AUTOMATIZACIONES =============================
+
+model AutomationRule {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @db.Uuid
+  projectId   String    @db.Uuid
+  name        String
+  enabled     Boolean   @default(true)
+  trigger     Json // { type, ... }
+  conditions  Json? // [{ field, op, value }]
+  actions     Json // [{ type, ... }]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("automation_rules")
+}
+
+// ===================== MÓVIL: PUSH Y SINCRONIZACIÓN ========================
+
+// Token push por dispositivo (FCM / APNs)
+model Device {
+  id         String         @id @default(uuid()) @db.Uuid
+  userId     String         @db.Uuid
+  platform   DevicePlatform
+  pushToken  String         @unique
+  appVersion String?
+  lastSeenAt DateTime       @default(now())
+  createdAt  DateTime       @default(now())
+  deletedAt  DateTime?
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  syncCursors SyncCursor[]
+
+  @@index([userId])
+  @@map("devices")
+}
+
+// Checkpoint de sincronización por dispositivo + workspace.
+// El cliente pide cambios desde lastSyncedAt para delta-sync eficiente.
+model SyncCursor {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @db.Uuid
+  deviceId     String   @db.Uuid
+  workspaceId  String   @db.Uuid
+  lastSyncedAt DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, workspaceId])
+  @@index([userId])
+  @@map("sync_cursors")
+}

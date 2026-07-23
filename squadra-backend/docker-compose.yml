@@ -1,0 +1,31 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: squadra-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: squadra
+      POSTGRES_PASSWORD: squadra
+      POSTGRES_DB: squadra
+    ports:
+      - "5432:5432"
+    volumes:
+      - squadra_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U squadra"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: squadra-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - squadra_redisdata:/data
+
+volumes:
+  squadra_pgdata:
+  squadra_redisdata:

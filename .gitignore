@@ -1,0 +1,28 @@
+# Dependencias
+node_modules/
+**/node_modules/
+
+# Builds
+dist/
+**/dist/
+.vite/
+
+# Variables de entorno (¡no subir secretos!)
+.env
+**/.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Prisma
+**/prisma/*.db
+
+# Logs y temporales
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

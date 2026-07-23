@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proyecto Squadra — Preview</title>
+<style>
+  :root{
+    --primary:#2F5496; --accent:#1F6FEB; --bg:#f4f6fb; --panel:#ffffff;
+    --ink:#1a2233; --muted:#6b7794; --border:#e3e8f0; --shadow:0 1px 3px rgba(20,40,80,.08);
+    --todo:#8a94a6; --doing:#1F6FEB; --review:#b8860b; --done:#2e9e5b; --blocked:#d64545;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:linear-gradient(90deg,#26437a,#2F5496);color:#fff;padding:14px 22px;display:flex;align-items:center;gap:16px}
+  header h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.3px}
+  header .sub{font-size:12px;opacity:.8}
+  header .spacer{flex:1}
+  .btn{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
+  .btn.ghost{background:rgba(255,255,255,.14)}
+  .btn:hover{filter:brightness(1.08)}
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;padding:16px 22px;align-items:start}
+  .board{display:flex;gap:14px;overflow-x:auto;padding-bottom:8px;min-width:0;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+  .col{background:#eef1f7;border-radius:12px;min-width:250px;width:250px;display:flex;flex-direction:column;max-height:76vh;scroll-snap-align:start}
+  /* Tablet: el panel lateral pasa abajo y fluye en grilla */
+  @media (max-width:1100px){
+    .layout{grid-template-columns:1fr}
+    .side{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;align-items:start}
+  }
+  /* Móvil: header apilado y columnas tipo swipe */
+  @media (max-width:640px){
+    header{flex-wrap:wrap;padding:12px 16px;gap:10px}
+    header .spacer{flex-basis:100%;height:0}
+    .btn{padding:7px 11px;font-size:12px}
+    .layout{padding:12px 14px}
+    .col{min-width:80vw;width:80vw;max-height:70vh}
+    .side{grid-template-columns:1fr}
+  }
+  .col h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:0;padding:12px 14px 8px;display:flex;justify-content:space-between}
+  .col .count{background:#dde3ee;border-radius:20px;padding:0 8px;font-size:11px;line-height:18px}
+  .cards{padding:4px 10px 12px;display:flex;flex-direction:column;gap:9px;overflow-y:auto}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:11px 12px;box-shadow:var(--shadow);cursor:pointer;transition:.12s}
+  .card:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .card.flash{animation:flash 1s ease}
+  @keyframes flash{0%{background:#fff7db}100%{background:#fff}}
+  .card .title{font-size:13.5px;font-weight:600;line-height:1.3;margin-bottom:8px}
+  .row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .badge{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:20px}
+  .badge.prio-alta{background:#fde8e8;color:#c02626}
+  .badge.prio-media{background:#fff4dc;color:#a5750a}
+  .badge.prio-baja{background:#e4f3ea;color:#1f7a44}
+  .avatar{width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .avatar.empty{background:#cdd4e0;color:#7a869c}
+  .meta{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;margin-left:auto}
+  .side{display:flex;flex-direction:column;gap:16px}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+  .panel h3{margin:0;padding:12px 14px;font-size:13px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--done);display:inline-block}
+  .pill{margin-left:auto;background:#eef1f7;color:var(--muted);font-size:11px;border-radius:20px;padding:1px 8px}
+  .feed{max-height:230px;overflow-y:auto;padding:6px 0}
+  .item{padding:8px 14px;font-size:12px;border-bottom:1px solid #f1f4f9;display:flex;gap:8px}
+  .item:last-child{border-bottom:0}
+  .item .ic{width:18px;height:18px;border-radius:5px;flex:none;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff}
+  .ic.ev{background:var(--accent)}.ic.au{background:#7c4dff}.ic.nt{background:var(--done)}
+  .item.unread{background:#f3f8ff}
+  .item .t{font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap}
+  .empty-state{padding:16px 14px;color:var(--muted);font-size:12px;text-align:center}
+  .legend{font-size:11px;color:var(--muted);padding:10px 14px;line-height:1.5;overflow-wrap:anywhere}
+  .foot{padding:10px 22px;font-size:11px;color:var(--muted);text-align:center}
+  code{background:#eef1f7;padding:1px 5px;border-radius:4px;font-size:11px}
+  .status-line{height:3px;border-radius:3px;margin-bottom:8px}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Proyecto Squadra</h1>
+    <div class="sub">Lanzamiento Q3 · vista Tablero</div>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn ghost" onclick="addTask()">+ Tarea</button>
+  <button class="btn" onclick="simulate()">▶ Simular actividad</button>
+</header>
+
+<div class="layout">
+  <div>
+    <div class="board" id="board"></div>
+    <div class="foot">Preview estático — datos en memoria que replican las formas de <code>projectTasks</code>, <code>taskChanged</code> e <code>inbox</code> del backend. Sin servidor.</div>
+  </div>
+
+  <div class="side">
+    <div class="panel">
+      <h3><span class="dot"></span> Tiempo real <span class="pill" id="rtcount">0 eventos</span></h3>
+      <div class="feed" id="feed"><div class="empty-state">Pulsá “Simular actividad” o movné una tarjeta (clic) para ver los eventos <code>taskChanged</code>.</div></div>
+    </div>
+
+    <div class="panel">
+      <h3>📥 Inbox <span class="pill" id="inboxcount">0 sin leer</span></h3>
+      <div class="feed" id="inbox"><div class="empty-state">Las notificaciones aparecen cuando cambia una tarea que seguís o tenés asignada.</div></div>
+    </div>
+
+    <div class="panel">
+      <h3>⚡ Automatización activa</h3>
+      <div class="legend">
+        <b>Regla:</b> al pasar a <b>En revisión</b> sin responsable →
+        asignar a <b>QA</b> y dejar comentario.<br>
+        <span style="color:var(--muted)">Se dispara sola cuando corresponde (marcada <code>source: automation</code> para no reprocesarse).</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- Estado en memoria (replica las formas del backend) ----
+const USERS = {
+  ana:  {id:'ana',  name:'Ana Pérez',   initials:'AP'},
+  beto: {id:'beto', name:'Beto Ruiz',   initials:'BR'},
+  cami: {id:'cami', name:'Cami Sosa',   initials:'CS'},
+  qa:   {id:'qa',   name:'QA Bot',      initials:'QA'},
+};
+const ME = 'ana'; // usuario actual (para el Inbox)
+const SECTIONS = [
+  {id:'todo',   name:'Por hacer',   color:'var(--todo)'},
+  {id:'doing',  name:'En curso',    color:'var(--doing)'},
+  {id:'review', name:'En revisión', color:'var(--review)'},
+  {id:'done',   name:'Hecho',       color:'var(--done)'},
+];
+let SEQ = 100;
+let tasks = [
+  t('Definir alcance del MVP','todo','ana','alta',3),
+  t('Modelo de datos Prisma','done','beto','alta',0),
+  t('Endpoints GraphQL de Tasks','doing','ana','alta',5),
+  t('Guard JWT + refresh tokens','doing','beto','media',2),
+  t('Campos personalizados','todo','cami','media',1),
+  t('Gateway de tiempo real','review',null,'alta',4),
+  t('Vista Calendario','todo','cami','baja',0),
+  t('Inbox de notificaciones','todo','ana','media',0),
+];
+function t(title,section,assignee,prio,comments){
+  return {id:'T-'+(SEQ++),title,sectionId:section,assigneeId:assignee,priority:prio,comments,version:1};
+}
+
+let rtEvents=0, inbox=[];
+
+// ---- Render ----
+function render(){
+  const board=document.getElementById('board'); board.innerHTML='';
+  for(const s of SECTIONS){
+    const col=document.createElement('div'); col.className='col';
+    const list=tasks.filter(x=>x.sectionId===s.id);
+    col.innerHTML=`<h2>${s.name}<span class="count">${list.length}</span></h2>`;
+    const cards=document.createElement('div'); cards.className='cards';
+    for(const tk of list) cards.appendChild(cardEl(tk,s));
+    col.appendChild(cards); board.appendChild(col);
+  }
+}
+function cardEl(tk,s){
+  const el=document.createElement('div'); el.className='card'; el.id='card-'+tk.id;
+  const u=tk.assigneeId?USERS[tk.assigneeId]:null;
+  el.innerHTML=`
+    <div class="status-line" style="background:${s.color}"></div>
+    <div class="title">${tk.title}</div>
+    <div class="row">
+      <span class="badge prio-${tk.priority}">${tk.priority.toUpperCase()}</span>
+      <span class="meta">${tk.comments?('💬 '+tk.comments):''}</span>
+    </div>
+    <div class="row" style="margin-top:8px">
+      ${u?`<span class="avatar" title="${u.name}">${u.initials}</span><span class="meta" style="margin-left:6px;margin-right:auto">${u.name}</span>`
+          :`<span class="avatar empty" title="Sin responsable">?</span><span class="meta" style="margin-left:6px;margin-right:auto">Sin responsable</span>`}
+      <span class="meta">v${tk.version}</span>
+    </div>`;
+  el.onclick=()=>advance(tk);
+  return el;
+}
+
+// ---- Interacción: avanzar de sección (simula moveTask/updateTask) ----
+const ORDER=['todo','doing','review','done'];
+function advance(tk){
+  const i=ORDER.indexOf(tk.sectionId);
+  const next=ORDER[Math.min(i+1,ORDER.length-1)];
+  if(next===tk.sectionId) return;
+  const actor=ME;
+  tk.sectionId=next; tk.version++;
+  emit('moved',tk,actor);
+  runAutomation(tk);
+  notifyWatchers(tk,actor,'status_changed');
+  render(); flash(tk.id);
+}
+
+// ---- Motor de reglas (cliente, replica AutomationsService) ----
+function runAutomation(tk){
+  if(tk.sectionId==='review' && !tk.assigneeId){
+    tk.assigneeId='qa'; tk.comments++; tk.version++;
+    logFeed('au','Regla ejecutada: “'+tk.title+'” → asignada a QA + comentario');
+    emit('updated',tk,'system',true); // source: automation
+  }
+}
+
+// ---- Eventos de tiempo real ----
+function emit(type,tk,actor,auto){
+  rtEvents++;
+  const src=auto?'automation':'user';
+  logFeed(auto?'au':'ev',`taskChanged · ${type} · ${tk.title} `+
+    `<code>${src}</code>`);
+  document.getElementById('rtcount').textContent=rtEvents+' eventos';
+}
+function logFeed(kind,text){
+  const feed=document.getElementById('feed');
+  if(feed.querySelector('.empty-state')) feed.innerHTML='';
+  const div=document.createElement('div'); div.className='item';
+  const icons={ev:'⇄',au:'⚡',nt:'●'};
+  div.innerHTML=`<span class="ic ${kind}">${icons[kind]}</span><span>${text}</span><span class="t">${now()}</span>`;
+  feed.prepend(div);
+}
+
+// ---- Notificaciones (replica NotificationsService: no self-notify) ----
+function notifyWatchers(tk,actor,type){
+  if(tk.assigneeId && tk.assigneeId!==actor && tk.assigneeId===ME){
+    pushInbox(type,tk);
+  }
+  // demo: si soy seguidor (Ana sigue todo) y no soy el actor
+  else if(actor!==ME && tk.assigneeId!==ME){
+    pushInbox(type,tk);
+  }
+}
+function pushInbox(type,tk){
+  inbox.unshift({type,title:tk.title,read:false,at:now()});
+  renderInbox();
+  logFeed('nt','inboxUpdated → '+USERS[ME].name+' · '+labels(type));
+}
+function renderInbox(){
+  const box=document.getElementById('inbox');
+  const unread=inbox.filter(n=>!n.read).length;
+  document.getElementById('inboxcount').textContent=unread+' sin leer';
+  if(inbox.length===0){box.innerHTML='<div class="empty-state">Sin notificaciones todavía.</div>';return;}
+  box.innerHTML='';
+  for(const n of inbox.slice(0,8)){
+    const div=document.createElement('div'); div.className='item'+(n.read?'':' unread');
+    div.innerHTML=`<span class="ic nt">●</span><span><b>${labels(n.type)}</b><br><span style="color:var(--muted)">${n.title}</span></span><span class="t">${n.at}</span>`;
+    div.onclick=()=>{n.read=true;renderInbox();};
+    box.appendChild(div);
+  }
+}
+function labels(t){return {status_changed:'Cambio de estado',assignment:'Te asignaron una tarea',comment:'Nuevo comentario'}[t]||t;}
+
+// ---- Simulación automática ----
+function simulate(){
+  const movable=tasks.filter(x=>x.sectionId!=='done');
+  if(!movable.length) return;
+  advance(movable[Math.floor(Math.random()*movable.length)]);
+}
+function addTask(){
+  const titles=['Escribir tests e2e','Configurar CI/CD','Diseñar iconografía','Optimizar índice de tareas'];
+  const nu=t(titles[Math.floor(Math.random()*titles.length)],'todo',['beto','cami',null][Math.floor(Math.random()*3)],['alta','media','baja'][Math.floor(Math.random()*3)],0);
+  tasks.unshift(nu); emit('created',nu,ME); render(); flash(nu.id);
+}
+function flash(id){const el=document.getElementById('card-'+id); if(el){el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'),1000);}}
+function now(){return new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+
+render(); renderInbox();
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+-- =============================================================================
+-- Proyecto Orion — Migración 0002: autenticación
+-- Añade credenciales locales y refresh tokens revocables.
+-- =============================================================================
+
+-- AlterTable: credencial local (null para SSO/OIDC)
+ALTER TABLE "users" ADD COLUMN "passwordHash" TEXT;
+
+-- CreateTable: refresh_tokens
+CREATE TABLE "refresh_tokens" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "userId" UUID NOT NULL,
+    "tokenHash" TEXT NOT NULL,
+    "deviceId" UUID,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "revokedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "refresh_tokens_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX "refresh_tokens_tokenHash_key" ON "refresh_tokens"("tokenHash");
+CREATE INDEX "refresh_tokens_userId_idx" ON "refresh_tokens"("userId");
+
+ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
