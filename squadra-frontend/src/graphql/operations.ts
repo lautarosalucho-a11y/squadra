@@ -329,6 +329,29 @@ export const SET_CF_VALUE = /* GraphQL */ `
   }
 `;
 
+/** Miembros del equipo (workspace) del usuario. */
+export const WORKSPACE_MEMBERS = /* GraphQL */ `
+  query WorkspaceMembers {
+    workspaceMembers {
+      id
+      fullName
+      email
+      avatarUrl
+    }
+  }
+`;
+
+/** Alta de un miembro por el dueño. */
+export const INVITE_MEMBER = /* GraphQL */ `
+  mutation InviteMember($email: String!, $fullName: String!, $password: String!) {
+    inviteMember(email: $email, fullName: $fullName, password: $password) {
+      id
+      fullName
+      email
+    }
+  }
+`;
+
 /** Miembros del proyecto (para autocompletar @menciones). */
 export const PROJECT_MEMBERS = /* GraphQL */ `
   query ProjectMembers($projectId: ID!) {

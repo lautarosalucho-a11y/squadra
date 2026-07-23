@@ -10,6 +10,7 @@ import { HomeView } from "./features/home/HomeView";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
 import { PortfoliosPage } from "./features/projects/PortfoliosPage";
 import { GoalsPage } from "./features/goals/GoalsPage";
+import { TeamPage } from "./features/team/TeamPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return auth.isAuthenticated() ? <>{children}</> : <Navigate to="/login" replace />;
@@ -35,6 +36,16 @@ export function App() {
           <ProtectedRoute>
             <AppShell>
               <ProjectsPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/team"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <TeamPage />
             </AppShell>
           </ProtectedRoute>
         }

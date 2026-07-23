@@ -165,6 +165,22 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           🗂 Portafolios
         </button>
+        <button
+          type="button"
+          onClick={() => navigate("/team")}
+          style={{
+            all: "unset",
+            cursor: "pointer",
+            padding: "var(--space-2)",
+            borderRadius: "var(--radius-sm)",
+            fontSize: "var(--text-sm)",
+            fontWeight: location.pathname === "/team" ? 600 : 400,
+            background: location.pathname === "/team" ? "var(--brand-50)" : "transparent",
+            color: location.pathname === "/team" ? "var(--brand-700)" : "var(--gray-900)",
+          }}
+        >
+          👥 Personas
+        </button>
         <ProjectNav projectId={projectId} onPick={(id) => navigate(`/projects/${id}/board`)} />
         <div style={{ marginTop: "auto" }}>
           <Button

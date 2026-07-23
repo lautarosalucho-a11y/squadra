@@ -38,4 +38,23 @@ export class AuthResolver {
   me(@CurrentUser() user: AuthUser) {
     return { id: user.userId, email: user.email, fullName: '', avatarUrl: null };
   }
+
+  /** Miembros del equipo del usuario autenticado. */
+  @Query(() => [UserModel], { name: 'workspaceMembers' })
+  @UseGuards(GqlAuthGuard)
+  workspaceMembers(@CurrentUser() user: AuthUser) {
+    return this.auth.workspaceMembers(user.userId);
+  }
+
+  /** Da de alta un miembro en el equipo del usuario autenticado. */
+  @Mutation(() => UserModel)
+  @UseGuards(GqlAuthGuard)
+  inviteMember(
+    @Args('email') email: string,
+    @Args('fullName') fullName: string,
+    @Args('password') password: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.auth.inviteMember(user.userId, email, fullName, password);
+  }
 }

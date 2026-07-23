@@ -36,6 +36,74 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
+  /** Resuelve el workspace del usuario (home o su primer membership). */
+  private async resolveWorkspace(userId: string): Promise<string> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { homeWorkspaceId: true },
+    });
+    let workspaceId = user?.homeWorkspaceId ?? null;
+    if (!workspaceId) {
+      const membership = await this.prisma.membership.findFirst({
+        where: { userId },
+        select: { workspaceId: true },
+      });
+      workspaceId = membership?.workspaceId ?? null;
+    }
+    if (!workspaceId) {
+      throw new ConflictException('No pertenecés a ningún equipo');
+    }
+    return workspaceId;
+  }
+
+  /** Miembros del equipo (workspace) del usuario autenticado. */
+  async workspaceMembers(userId: string) {
+    const workspaceId = await this.resolveWorkspace(userId);
+    const memberships = await this.prisma.membership.findMany({
+      where: { workspaceId },
+      select: {
+        role: true,
+        user: { select: { id: true, email: true, fullName: true, avatarUrl: true } },
+      },
+      orderBy: { user: { fullName: 'asc' } },
+    });
+    return memberships.map((m: { role: string; user: unknown }) => m.user);
+  }
+
+  /**
+   * Alta de un miembro por parte del dueño: crea (o reutiliza) el usuario y lo
+   * suma como miembro del workspace del invitador.
+   */
+  async inviteMember(
+    inviterId: string,
+    email: string,
+    fullName: string,
+    password: string,
+  ) {
+    const workspaceId = await this.resolveWorkspace(inviterId);
+
+    let user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      const passwordHash = await bcrypt.hash(password, 10);
+      user = await this.prisma.user.create({
+        data: { email, fullName, passwordHash, homeWorkspaceId: workspaceId },
+      });
+    }
+
+    await this.prisma.membership.upsert({
+      where: { workspaceId_userId: { workspaceId, userId: user.id } },
+      create: { workspaceId, userId: user.id, role: 'member' },
+      update: {},
+    });
+
+    return {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      avatarUrl: user.avatarUrl,
+    };
+  }
+
   async login(input: LoginInput) {
     const user = await this.prisma.user.findUnique({
       where: { email: input.email },
