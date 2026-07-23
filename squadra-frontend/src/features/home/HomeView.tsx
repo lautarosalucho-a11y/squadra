@@ -67,9 +67,8 @@ export function HomeView() {
         prev.map((t) => (t.id === updated.id ? { ...t, status: updated.status, version: updated.version } : t)),
       );
     } else {
-      // Falló: revertir y avisar.
+      // Falló: revertir al estado previo.
       setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: task.status } : t)));
-      alert("No se pudo actualizar la tarea: " + (res.error?.message ?? "error desconocido"));
     }
   }
 

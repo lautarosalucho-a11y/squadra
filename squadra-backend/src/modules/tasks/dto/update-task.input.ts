@@ -13,7 +13,7 @@ import { TaskStatus } from '../models/task.model';
 
 @InputType()
 export class UpdateTaskInput {
-  @Field()
+  @Field({ nullable: true })
   @IsString()
   @MaxLength(500)
   @IsOptional()
