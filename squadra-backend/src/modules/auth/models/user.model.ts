@@ -1,4 +1,4 @@
-import { ObjectType, Field, ID } from '@nestjs/graphql';
+﻿import { ObjectType, Field, ID } from '@nestjs/graphql';
 
 @ObjectType()
 export class UserModel {
@@ -11,6 +11,6 @@ export class UserModel {
   @Field()
   fullName!: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   avatarUrl?: string | null;
 }

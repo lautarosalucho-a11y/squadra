@@ -1,4 +1,4 @@
-import {
+﻿import {
   ObjectType,
   Field,
   ID,
@@ -26,7 +26,7 @@ export class Goal {
   @Field()
   title!: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   description?: string | null;
 
   @Field(() => ID, { nullable: true })
