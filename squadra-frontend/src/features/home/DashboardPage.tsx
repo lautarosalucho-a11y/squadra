@@ -14,6 +14,15 @@ const STATUS_COLOR: Record<TaskStatus, string> = {
 };
 
 export function DashboardPage() {
+  return (
+    <div style={{ maxWidth: 1000, margin: "0 auto", padding: "var(--space-6)" }}>
+      <h1 style={{ fontSize: "var(--text-2xl)", margin: "0 0 var(--space-5)" }}>Panel</h1>
+      <DashboardBody />
+    </div>
+  );
+}
+
+export function DashboardBody() {
   const [{ data }] = useQuery<{ myTasks: Task[] }>({ query: MY_TASKS });
   const [{ data: projData }] = useQuery<{ myProjects: { id: string; name: string }[] }>({ query: MY_PROJECTS });
 
@@ -61,9 +70,7 @@ export function DashboardPage() {
   const maxProj = Math.max(1, ...projectsRanked.map(([, n]) => n));
 
   return (
-    <div style={{ maxWidth: 1000, margin: "0 auto", padding: "var(--space-6)" }}>
-      <h1 style={{ fontSize: "var(--text-2xl)", margin: "0 0 var(--space-5)" }}>Panel</h1>
-
+    <div>
       {/* Métricas */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "var(--space-3)", marginBottom: "var(--space-5)" }}>
         <Metric label="Finalizadas" value={stats.done} color="var(--success)" />
