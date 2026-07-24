@@ -16,6 +16,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  CREATE_SECTION,
   CREATE_TASK,
   MOVE_TASK,
   PROJECT_CF_VALUES,
@@ -91,6 +92,7 @@ export function ListView() {
   const [, createTask] = useMutation(CREATE_TASK);
   const [, moveTask] = useMutation(MOVE_TASK);
   const [, setCfValue] = useMutation(SET_CF_VALUE);
+  const [, createSection] = useMutation(CREATE_SECTION);
 
   const [board, setBoard] = useState<GroupedTasks | null>(null);
   useEffect(() => {
@@ -244,6 +246,10 @@ export function ListView() {
     const res = await createTask({ input: { projectId, title, sectionId: sectionId ?? undefined } });
     if (!res.error) refetch({ requestPolicy: "network-only" });
   }
+  async function onCreateSection(name: string) {
+    const res = await createSection({ input: { projectId, name } });
+    if (!res.error) refetch({ requestPolicy: "network-only" });
+  }
   async function onReorder(sectionKey: string | null, e: DragEndEvent) {
     if (!e.over || e.active.id === e.over.id) return;
     const g = groups.find((x) => x.key === sectionKey);
@@ -326,8 +332,53 @@ export function ListView() {
             )}
           </section>
         ))}
+
+        {groupBy === "section" && <AddSection onCreate={onCreateSection} />}
       </div>
     </div>
+  );
+}
+
+/** Fila para crear una sección nueva en el proyecto. */
+function AddSection({ onCreate }: { onCreate: (name: string) => void }) {
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("");
+  if (!adding)
+    return (
+      <button
+        type="button"
+        onClick={() => setAdding(true)}
+        style={{ all: "unset", cursor: "pointer", display: "flex", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-2)", color: "var(--gray-600)", fontSize: "var(--text-sm)", fontWeight: 600 }}
+      >
+        <span style={{ color: "var(--gray-400)" }}>＋</span> Agregar sección
+      </button>
+    );
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const n = name.trim();
+        if (n) onCreate(n);
+        setName("");
+        setAdding(false);
+      }}
+      style={{ padding: "var(--space-2)" }}
+    >
+      <input
+        autoFocus
+        value={name}
+        placeholder="Nombre de la sección"
+        aria-label="Nombre de la sección"
+        onChange={(e) => setName(e.target.value)}
+        onBlur={() => {
+          const n = name.trim();
+          if (n) onCreate(n);
+          setName("");
+          setAdding(false);
+        }}
+        style={{ height: 32, padding: "0 var(--space-2)", fontSize: "var(--text-sm)", border: "1px solid var(--brand-500)", borderRadius: "var(--radius-sm)", outline: "none", fontFamily: "inherit" }}
+      />
+    </form>
   );
 }
 

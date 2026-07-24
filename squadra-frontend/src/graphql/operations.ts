@@ -153,6 +153,16 @@ export const ADD_DEPENDENCY = /* GraphQL */ `
   }
 `;
 
+/** Crea una sección dentro del proyecto. */
+export const CREATE_SECTION = /* GraphQL */ `
+  mutation CreateSection($input: CreateSectionInput!) {
+    createSection(input: $input) {
+      id
+      name
+    }
+  }
+`;
+
 /** Mueve una tarea entre secciones / reordena (drag Kanban). */
 export const MOVE_TASK = /* GraphQL */ `
   mutation MoveTask($input: MoveTaskInput!) {
