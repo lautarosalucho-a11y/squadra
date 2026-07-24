@@ -207,8 +207,8 @@ export function HomeView() {
                   {projectName.get(t.projectId ?? "")}
                 </span>
               )}
-              <span style={{ minWidth: 72, textAlign: "right" }} title="Agregar fecha de entrega">
-                <InlineDate value={t.dueDate} onCommit={(iso) => onSetDue(t, iso)} />
+              <span style={{ minWidth: 72, display: "flex", justifyContent: "flex-end" }}>
+                <InlineDate value={t.dueDate} onCommit={(iso) => onSetDue(t, iso)} emptyIcon />
               </span>
             </div>
           ))

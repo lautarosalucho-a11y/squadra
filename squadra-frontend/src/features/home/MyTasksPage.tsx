@@ -140,8 +140,8 @@ export function MyTasksPage() {
                         </span>
                       )}
                     </span>
-                    <span style={{ textAlign: "right" }} title="Fecha de entrega">
-                      <InlineDate value={t.dueDate} onCommit={(iso) => setDue(t, iso)} />
+                    <span style={{ display: "flex", justifyContent: "flex-end" }}>
+                      <InlineDate value={t.dueDate} onCommit={(iso) => setDue(t, iso)} emptyIcon />
                     </span>
                   </div>
                 );
