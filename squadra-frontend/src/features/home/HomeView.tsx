@@ -10,6 +10,7 @@ import {
 } from "../../graphql/operations";
 import type { Task, TaskStatus } from "../../types";
 import { Avatar } from "../../components/ui";
+import { InlineDate } from "../list/InlineDate";
 import { format, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -69,6 +70,11 @@ export function HomeView() {
     if (!title || projects.length === 0) return;
     await createTask({ input: { projectId: projects[0].id, title } });
     setQuickTitle("");
+  }
+
+  async function onSetDue(task: Task, iso: string | null) {
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, dueDate: iso } : t)));
+    await updateTask({ id: task.id, input: { dueDate: iso } });
   }
 
   const today = startOfDay(new Date());
@@ -201,8 +207,8 @@ export function HomeView() {
                   {projectName.get(t.projectId ?? "")}
                 </span>
               )}
-              <span style={{ fontSize: "var(--text-sm)", color: tab === "overdue" ? "var(--danger)" : "var(--gray-400)", minWidth: 64, textAlign: "right" }}>
-                {t.dueDate ? format(new Date(t.dueDate), "dd MMM", { locale: es }) : "—"}
+              <span style={{ minWidth: 72, textAlign: "right" }} title="Agregar fecha de entrega">
+                <InlineDate value={t.dueDate} onCommit={(iso) => onSetDue(t, iso)} />
               </span>
             </div>
           ))
