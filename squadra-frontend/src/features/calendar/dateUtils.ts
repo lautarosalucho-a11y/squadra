@@ -8,9 +8,11 @@ import {
   startOfWeek,
 } from "date-fns";
 
-/** Clave de día estable (yyyy-MM-dd) usada como id de celda droppable. */
+/** Clave de día estable (yyyy-MM-dd) usada como id de celda droppable.
+ *  Para strings ISO "solo día" toma la parte de fecha (evita corrimiento por zona horaria). */
 export function dayKey(d: Date | string): string {
-  return format(new Date(d), "yyyy-MM-dd");
+  if (typeof d === "string") return d.slice(0, 10);
+  return format(d, "yyyy-MM-dd");
 }
 
 /** Matriz de días (semanas Lun–Dom) que cubre el mes de `cursor`. */

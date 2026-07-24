@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "urql";
 import { CREATE_TASK, MY_PROJECTS, MY_TASKS, UPDATE_TASK } from "../../graphql/operations";
 import type { Task, TaskStatus } from "../../types";
 import { InlineDate } from "../list/InlineDate";
+import { localNoon } from "../../lib/dateOnly";
 import { differenceInCalendarDays, startOfDay } from "date-fns";
 
 interface Project {
@@ -49,7 +50,7 @@ export function MyTasksPage() {
     for (const t of tasks) {
       if (t.status === "done") { g.done.push(t); continue; }
       if (!t.dueDate) { g.recent.push(t); continue; }
-      const diff = differenceInCalendarDays(startOfDay(new Date(t.dueDate)), today);
+      const diff = differenceInCalendarDays(startOfDay(localNoon(t.dueDate)), today);
       if (diff < 0) g.overdue.push(t);
       else if (diff === 0) g.today.push(t);
       else if (diff === 1) g.tomorrow.push(t);

@@ -3,9 +3,11 @@ import { Avatar, Card, StatusPill } from "../../components/ui";
 import type { Task } from "../../types";
 import { taskPanel } from "../comments/taskPanelStore";
 
+import { localNoon } from "../../lib/dateOnly";
+
 function formatDue(due: string | null): string | null {
   if (!due) return null;
-  return new Date(due).toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
+  return localNoon(due).toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
 }
 
 /** Tarjeta de tarea arrastrable dentro del Tablero. */

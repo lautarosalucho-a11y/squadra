@@ -11,6 +11,7 @@ import {
 import type { Task, TaskStatus } from "../../types";
 import { Avatar } from "../../components/ui";
 import { InlineDate } from "../list/InlineDate";
+import { localNoon } from "../../lib/dateOnly";
 import { format, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -84,7 +85,7 @@ export function HomeView() {
     const done: Task[] = [];
     for (const t of tasks) {
       if (t.status === "done") done.push(t);
-      else if (t.dueDate && startOfDay(new Date(t.dueDate)) < today) overdue.push(t);
+      else if (t.dueDate && startOfDay(localNoon(t.dueDate)) < today) overdue.push(t);
       else upcoming.push(t);
     }
     return { upcoming, overdue, done };

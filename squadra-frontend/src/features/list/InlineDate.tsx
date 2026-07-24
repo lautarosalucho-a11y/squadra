@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
+import { dayPart, localNoon, toUtcDateIso } from "../../lib/dateOnly";
 
 interface Props {
   value: string | null;
@@ -26,11 +27,11 @@ export function InlineDate({ value, onCommit, emptyIcon }: Props) {
       <input
         type="date"
         autoFocus
-        defaultValue={value ? format(new Date(value), "yyyy-MM-dd") : ""}
+        defaultValue={value ? dayPart(value) : ""}
         onBlur={() => setEditing(false)}
         onChange={(e) => {
           const v = e.target.value;
-          onCommit(v ? new Date(v + "T00:00:00").toISOString() : null);
+          onCommit(v ? toUtcDateIso(v) : null);
           setEditing(false);
         }}
         style={{
@@ -82,7 +83,7 @@ export function InlineDate({ value, onCommit, emptyIcon }: Props) {
         color: value ? "var(--gray-600)" : "var(--gray-400)",
       }}
     >
-      {value ? format(new Date(value), "dd MMM") : "—"}
+      {value ? format(localNoon(value), "dd MMM") : "—"}
     </button>
   );
 }
