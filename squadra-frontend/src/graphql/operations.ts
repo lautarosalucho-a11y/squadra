@@ -175,6 +175,24 @@ export const MOVE_TASK = /* GraphQL */ `
   }
 `;
 
+/** Contadores por tarea (adjuntos, comentarios, no leídos) para la lista. */
+export const PROJECT_TASK_META = /* GraphQL */ `
+  query ProjectTaskMeta($projectId: ID!) {
+    projectTaskMeta(projectId: $projectId) {
+      taskId
+      attachmentCount
+      commentCount
+      unreadCommentCount
+    }
+  }
+`;
+
+export const MARK_TASK_COMMENTS_READ = /* GraphQL */ `
+  mutation MarkTaskCommentsRead($taskId: ID!) {
+    markTaskCommentsRead(taskId: $taskId)
+  }
+`;
+
 /** Adjuntos de una tarea (metadatos). */
 export const TASK_ATTACHMENTS = /* GraphQL */ `
   query TaskAttachments($taskId: ID!) {

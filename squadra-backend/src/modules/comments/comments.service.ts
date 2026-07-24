@@ -16,6 +16,64 @@ export class CommentsService {
     private readonly events: EventEmitter2,
   ) {}
 
+  /** Contadores por tarea (adjuntos, comentarios, no leídos del usuario) para un proyecto. */
+  async projectTaskMeta(projectId: string, userId: string) {
+    const tasks = await this.prisma.task.findMany({
+      where: { projectId, deletedAt: null },
+      select: { id: true },
+    });
+    const ids = tasks.map((t: { id: string }) => t.id);
+    if (ids.length === 0) return [];
+
+    const [atts, comms, unread] = await Promise.all([
+      this.prisma.attachment.groupBy({
+        by: ['taskId'],
+        where: { taskId: { in: ids }, deletedAt: null },
+        _count: { _all: true },
+      }),
+      this.prisma.comment.groupBy({
+        by: ['taskId'],
+        where: { taskId: { in: ids }, deletedAt: null },
+        _count: { _all: true },
+      }),
+      this.prisma.notification.groupBy({
+        by: ['taskId'],
+        where: {
+          taskId: { in: ids },
+          userId,
+          type: { in: ['comment', 'mention'] },
+          readAt: null,
+        },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const aMap = new Map(atts.map((a) => [a.taskId, a._count._all]));
+    const cMap = new Map(comms.map((c) => [c.taskId, c._count._all]));
+    const uMap = new Map(unread.map((u) => [u.taskId, u._count._all]));
+
+    return ids.map((id) => ({
+      taskId: id,
+      attachmentCount: aMap.get(id) ?? 0,
+      commentCount: cMap.get(id) ?? 0,
+      unreadCommentCount: uMap.get(id) ?? 0,
+    }));
+  }
+
+  /** Marca como leídos los comentarios/menciones del usuario en una tarea. */
+  async markTaskCommentsRead(taskId: string, userId: string) {
+    await this.prisma.notification.updateMany({
+      where: {
+        taskId,
+        userId,
+        type: { in: ['comment', 'mention'] },
+        readAt: null,
+      },
+      data: { readAt: new Date() },
+    });
+    return true;
+  }
+
   /** Hilo de comentarios de una tarea (orden cronológico). */
   async list(taskId: string) {
     const rows = await this.prisma.comment.findMany({

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery } from "urql";
 import {
@@ -18,13 +18,16 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   CREATE_SECTION,
   CREATE_TASK,
+  MARK_TASK_COMMENTS_READ,
   MOVE_TASK,
   PROJECT_CF_VALUES,
   PROJECT_CUSTOM_FIELDS,
   PROJECT_LIST,
   PROJECT_MEMBERS,
+  PROJECT_TASK_META,
   SET_CF_VALUE,
   UPDATE_TASK,
+  UPLOAD_ATTACHMENT,
 } from "../../graphql/operations";
 import {
   STATUS_ORDER,
@@ -88,11 +91,41 @@ export function ListView() {
     query: PROJECT_CF_VALUES,
     variables: { projectId },
   });
+  const [{ data: metaData }, refetchMeta] = useQuery<{
+    projectTaskMeta: { taskId: string; attachmentCount: number; commentCount: number; unreadCommentCount: number }[];
+  }>({ query: PROJECT_TASK_META, variables: { projectId } });
   const [, updateTask] = useMutation(UPDATE_TASK);
   const [, createTask] = useMutation(CREATE_TASK);
   const [, moveTask] = useMutation(MOVE_TASK);
   const [, setCfValue] = useMutation(SET_CF_VALUE);
   const [, createSection] = useMutation(CREATE_SECTION);
+  const [, uploadAttachment] = useMutation(UPLOAD_ATTACHMENT);
+  const [, markTaskCommentsRead] = useMutation(MARK_TASK_COMMENTS_READ);
+
+  const meta = useMemo(() => {
+    const m = new Map<string, { attachmentCount: number; commentCount: number; unreadCommentCount: number }>();
+    (metaData?.projectTaskMeta ?? []).forEach((x) =>
+      m.set(x.taskId, { attachmentCount: x.attachmentCount, commentCount: x.commentCount, unreadCommentCount: x.unreadCommentCount }),
+    );
+    return m;
+  }, [metaData]);
+
+  async function onAttach(taskId: string, file: File) {
+    if (file.size > 5 * 1024 * 1024) return;
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result).split(",")[1] ?? "");
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+    await uploadAttachment({ input: { taskId, fileName: file.name, mimeType: file.type || null, base64 } });
+    refetchMeta({ requestPolicy: "network-only" });
+  }
+  function onOpenComments(taskId: string) {
+    taskPanel.open(taskId);
+    markTaskCommentsRead({ taskId });
+    setTimeout(() => refetchMeta({ requestPolicy: "network-only" }), 300);
+  }
 
   const [board, setBoard] = useState<GroupedTasks | null>(null);
   useEffect(() => {
@@ -276,7 +309,7 @@ export function ListView() {
       </Centered>
     );
 
-  const ctx: RowCtx = { activeCols, template, reorderMode, fields, members, cfValues, onPatch, onSetCf };
+  const ctx: RowCtx = { activeCols, template, reorderMode, fields, members, cfValues, meta, onPatch, onSetCf, onAttach, onOpenComments };
 
   return (
     <div style={{ padding: "var(--space-4) var(--space-2)" }}>
@@ -389,8 +422,11 @@ interface RowCtx {
   fields: CustomField[];
   members: ProjectMember[];
   cfValues: CfMap;
+  meta: Map<string, { attachmentCount: number; commentCount: number; unreadCommentCount: number }>;
   onPatch: (task: Task, patch: TaskPatch) => void;
   onSetCf: (taskId: string, field: CustomField, value: CustomFieldValue["value"] | null) => void;
+  onAttach: (taskId: string, file: File) => void;
+  onOpenComments: (taskId: string) => void;
 }
 
 function Row({ task, depth, ctx, sortable }: { task: Task; depth: number; ctx: RowCtx; sortable?: boolean }) {
@@ -404,6 +440,8 @@ function Row({ task, depth, ctx, sortable }: { task: Task; depth: number; ctx: R
     : {};
 
   const fieldById = (fid: string) => ctx.fields.find((f) => f.id === fid);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const m = ctx.meta.get(task.id);
 
   return (
     <>
@@ -439,8 +477,38 @@ function Row({ task, depth, ctx, sortable }: { task: Task; depth: number; ctx: R
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <InlineEdit value={task.title} strikethrough={done} onCommit={(title) => ctx.onPatch(task, { title })} />
                 </div>
-                <button type="button" aria-label="Comentarios" title="Comentarios" onClick={() => taskPanel.open(task.id)} style={{ all: "unset", cursor: "pointer", fontSize: 13, color: "var(--gray-400)", visibility: hover ? "visible" : "hidden" }}>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) ctx.onAttach(task.id, f);
+                    if (fileRef.current) fileRef.current.value = "";
+                  }}
+                />
+                <button
+                  type="button"
+                  aria-label="Adjuntar archivo"
+                  title={(m?.attachmentCount ?? 0) > 0 ? `${m?.attachmentCount} archivo(s)` : "Adjuntar archivo"}
+                  onClick={() => fileRef.current?.click()}
+                  style={{ all: "unset", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 2, fontSize: 13, color: (m?.attachmentCount ?? 0) > 0 ? "var(--brand-600)" : "var(--gray-400)", visibility: (m?.attachmentCount ?? 0) > 0 || hover ? "visible" : "hidden" }}
+                >
+                  📎{(m?.attachmentCount ?? 0) > 0 && <span style={{ fontSize: 11, fontWeight: 600 }}>{m?.attachmentCount}</span>}
+                </button>
+                <button
+                  type="button"
+                  aria-label="Comentarios"
+                  title="Comentarios"
+                  onClick={() => ctx.onOpenComments(task.id)}
+                  style={{ all: "unset", cursor: "pointer", position: "relative", fontSize: 13, color: (m?.commentCount ?? 0) > 0 ? "var(--gray-600)" : "var(--gray-400)", visibility: (m?.commentCount ?? 0) > 0 || (m?.unreadCommentCount ?? 0) > 0 || hover ? "visible" : "hidden" }}
+                >
                   💬
+                  {(m?.unreadCommentCount ?? 0) > 0 && (
+                    <span style={{ position: "absolute", top: -6, right: -8, minWidth: 15, height: 15, padding: "0 3px", boxSizing: "border-box", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, color: "#fff", background: "var(--danger)", borderRadius: "var(--radius-full)" }}>
+                      {(m?.unreadCommentCount ?? 0) > 9 ? "9+" : m?.unreadCommentCount}
+                    </span>
+                  )}
                 </button>
               </div>
             );
