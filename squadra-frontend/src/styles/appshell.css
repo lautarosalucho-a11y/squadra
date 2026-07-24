@@ -1,0 +1,82 @@
+/* Layout responsive del AppShell: sidebar fijo en escritorio,
+   drawer deslizante (oculto por defecto) en pantallas chicas. */
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 232px 1fr;
+  height: 100%;
+}
+
+.app-shell__sidebar {
+  background: var(--gray-0);
+  border-right: 1px solid var(--gray-200);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow-y: auto;
+}
+
+.app-shell__menu-btn {
+  display: none;
+}
+
+.app-shell__backdrop {
+  display: none;
+}
+
+.app-shell__view-switcher {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .app-shell__sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 260px;
+    max-width: 82vw;
+    z-index: 40;
+    transform: translateX(-100%);
+    transition: transform var(--motion-base) var(--ease);
+    box-shadow: var(--shadow-md);
+  }
+
+  .app-shell__sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .app-shell__menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    background: var(--gray-0);
+    font-size: var(--text-lg);
+    cursor: pointer;
+    flex: 0 0 auto;
+  }
+
+  .app-shell__backdrop.is-open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    z-index: 30;
+  }
+
+  .app-shell__nav-btn {
+    min-height: 44px;
+  }
+}

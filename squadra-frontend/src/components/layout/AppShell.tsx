@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "urql";
 import { MY_PROJECTS } from "../../graphql/operations";
@@ -86,26 +86,30 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { projectId = "demo" } = useParams();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Navega y cierra el drawer en mobile (no-op en escritorio, donde el
+  // sidebar es fijo y esta clase no aplica ningún transform).
+  function goTo(path: string) {
+    navigate(path);
+    setSidebarOpen(false);
+  }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "232px 1fr", height: "100%" }}>
-      <aside
-        style={{
-          background: "var(--gray-0)",
-          borderRight: "1px solid var(--gray-200)",
-          padding: "var(--space-4)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-4)",
-        }}
-      >
+    <div className="app-shell">
+      <div
+        className={`app-shell__backdrop${sidebarOpen ? " is-open" : ""}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+      <aside className={`app-shell__sidebar${sidebarOpen ? " is-open" : ""}`}>
         <div style={{ fontSize: "var(--text-xl)", fontWeight: 700, color: "var(--brand-600)" }}>
           Squadra
         </div>
         <CreateMenu />
         <button
           type="button"
-          onClick={() => navigate("/")}
+          className="app-shell__nav-btn"
+          onClick={() => goTo("/")}
           style={{
             all: "unset",
             cursor: "pointer",
@@ -121,7 +125,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </button>
         <button
           type="button"
-          onClick={() => navigate("/my-tasks")}
+          className="app-shell__nav-btn"
+          onClick={() => goTo("/my-tasks")}
           style={{
             all: "unset",
             cursor: "pointer",
@@ -137,7 +142,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </button>
         <button
           type="button"
-          onClick={() => navigate("/dashboard")}
+          className="app-shell__nav-btn"
+          onClick={() => goTo("/dashboard")}
           style={{
             all: "unset",
             cursor: "pointer",
@@ -153,7 +159,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </button>
         <button
           type="button"
-          onClick={() => navigate("/goals")}
+          className="app-shell__nav-btn"
+          onClick={() => goTo("/goals")}
           style={{
             all: "unset",
             cursor: "pointer",
@@ -169,7 +176,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </button>
         <button
           type="button"
-          onClick={() => navigate("/projects")}
+          className="app-shell__nav-btn"
+          onClick={() => goTo("/projects")}
           style={{
             all: "unset",
             cursor: "pointer",
@@ -185,7 +193,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </button>
         <button
           type="button"
-          onClick={() => navigate("/portfolios")}
+          className="app-shell__nav-btn"
+          onClick={() => goTo("/portfolios")}
           style={{
             all: "unset",
             cursor: "pointer",
@@ -201,7 +210,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </button>
         <button
           type="button"
-          onClick={() => navigate("/team")}
+          className="app-shell__nav-btn"
+          onClick={() => goTo("/team")}
           style={{
             all: "unset",
             cursor: "pointer",
@@ -215,7 +225,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           👥 Personas
         </button>
-        <ProjectNav projectId={projectId} onPick={(id) => navigate(`/projects/${id}/board`)} />
+        <ProjectNav projectId={projectId} onPick={(id) => goTo(`/projects/${id}/board`)} />
         <div style={{ marginTop: "auto" }}>
           <Button
             variant="ghost"
@@ -242,32 +252,44 @@ export function AppShell({ children }: { children: ReactNode }) {
             background: "var(--gray-0)",
           }}
         >
-          {location.pathname.startsWith("/projects/") &&
-            VIEWS.map((v) => {
-            const enabled = Boolean(v.slug);
-            const active = enabled && location.pathname.endsWith(`/${v.slug}`);
-            return (
-              <button
-                key={v.label}
-                style={{
-                  border: "none",
-                  background: active ? "var(--brand-50)" : "transparent",
-                  color: active ? "var(--brand-700)" : "var(--gray-600)",
-                  fontWeight: active ? 600 : 400,
-                  fontSize: "var(--text-sm)",
-                  padding: "var(--space-2) var(--space-3)",
-                  borderRadius: "var(--radius-sm)",
-                  cursor: enabled ? "pointer" : "not-allowed",
-                  opacity: enabled ? 1 : 0.5,
-                }}
-                disabled={!enabled}
-                title={enabled ? `Vista ${v.label}` : "Próximamente"}
-                onClick={() => v.slug && navigate(`/projects/${projectId}/${v.slug}`)}
-              >
-                {v.label}
-              </button>
-            );
-          })}
+          <button
+            type="button"
+            className="app-shell__menu-btn"
+            aria-label="Abrir menú"
+            onClick={() => setSidebarOpen(true)}
+          >
+            ☰
+          </button>
+          <div className="app-shell__view-switcher">
+            {location.pathname.startsWith("/projects/") &&
+              VIEWS.map((v) => {
+              const enabled = Boolean(v.slug);
+              const active = enabled && location.pathname.endsWith(`/${v.slug}`);
+              return (
+                <button
+                  key={v.label}
+                  style={{
+                    border: "none",
+                    background: active ? "var(--brand-50)" : "transparent",
+                    color: active ? "var(--brand-700)" : "var(--gray-600)",
+                    fontWeight: active ? 600 : 400,
+                    fontSize: "var(--text-sm)",
+                    padding: "var(--space-2) var(--space-3)",
+                    borderRadius: "var(--radius-sm)",
+                    cursor: enabled ? "pointer" : "not-allowed",
+                    opacity: enabled ? 1 : 0.5,
+                    whiteSpace: "nowrap",
+                    flex: "0 0 auto",
+                  }}
+                  disabled={!enabled}
+                  title={enabled ? `Vista ${v.label}` : "Próximamente"}
+                  onClick={() => v.slug && navigate(`/projects/${projectId}/${v.slug}`)}
+                >
+                  {v.label}
+                </button>
+              );
+            })}
+          </div>
           <LiveIndicator />
           <InboxButton />
         </header>
