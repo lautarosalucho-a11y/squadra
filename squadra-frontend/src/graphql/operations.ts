@@ -175,6 +175,46 @@ export const MOVE_TASK = /* GraphQL */ `
   }
 `;
 
+/** Adjuntos de una tarea (metadatos). */
+export const TASK_ATTACHMENTS = /* GraphQL */ `
+  query TaskAttachments($taskId: ID!) {
+    taskAttachments(taskId: $taskId) {
+      id
+      fileName
+      mimeType
+      sizeBytes
+      uploadedById
+      createdAt
+    }
+  }
+`;
+
+export const UPLOAD_ATTACHMENT = /* GraphQL */ `
+  mutation UploadAttachment($input: UploadAttachmentInput!) {
+    uploadAttachment(input: $input) {
+      id
+      fileName
+      sizeBytes
+    }
+  }
+`;
+
+export const ATTACHMENT_DATA = /* GraphQL */ `
+  query AttachmentData($id: ID!) {
+    attachmentData(id: $id) {
+      fileName
+      mimeType
+      base64
+    }
+  }
+`;
+
+export const DELETE_ATTACHMENT = /* GraphQL */ `
+  mutation DeleteAttachment($id: ID!) {
+    deleteAttachment(id: $id)
+  }
+`;
+
 /** Hilo de comentarios de una tarea. */
 export const TASK_COMMENTS = /* GraphQL */ `
   query TaskComments($taskId: ID!) {

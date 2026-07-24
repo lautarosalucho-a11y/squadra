@@ -16,6 +16,7 @@ import { AutomationsModule } from './modules/automations/automations.module';
 import { RemindersModule } from './modules/reminders/reminders.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { GoalsModule } from './modules/goals/goals.module';
+import { AttachmentsModule } from './modules/attachments/attachments.module';
 
 const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
 
@@ -44,6 +45,7 @@ const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
     RemindersModule,
     CommentsModule,
     GoalsModule,
+    AttachmentsModule,
   ],
 })
 export class AppModule {}

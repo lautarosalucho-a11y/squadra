@@ -12,6 +12,7 @@ import { relativeTime } from "../inbox/notificationCopy";
 import { useOpenTask, taskPanel } from "./taskPanelStore";
 import { MentionComposer } from "./MentionComposer";
 import { RichText } from "./RichText";
+import { AttachmentsSection } from "./AttachmentsSection";
 
 interface CommentsData {
   taskComments: Comment[];
@@ -107,6 +108,8 @@ function Panel({ taskId, projectId }: { taskId: string; projectId: string }) {
             ✕
           </button>
         </header>
+
+        <AttachmentsSection taskId={taskId} />
 
         <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
           {fetching && comments.length === 0 ? (

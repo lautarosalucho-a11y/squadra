@@ -332,7 +332,8 @@ model Attachment {
   id           String    @id @default(uuid()) @db.Uuid
   taskId       String    @db.Uuid
   fileName     String
-  storageKey   String // clave en S3
+  storageKey   String // clave en S3 (o "inline" si el binario va en `data`)
+  data         Bytes? // contenido del archivo cuando se guarda en la base
   mimeType     String?
   sizeBytes    BigInt?
   uploadedById String?   @db.Uuid
