@@ -18,7 +18,7 @@ export class Attachment {
   @Field()
   fileName!: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   mimeType?: string | null;
 
   @Field(() => Int, { nullable: true })
@@ -37,7 +37,7 @@ export class AttachmentData {
   @Field()
   fileName!: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   mimeType?: string | null;
 
   @Field()
