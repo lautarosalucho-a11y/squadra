@@ -24,7 +24,8 @@ export function DayCell({ date, cursor, tasks }: Props) {
     <div
       ref={setNodeRef}
       style={{
-        minHeight: 104,
+        height: "100%",
+        minHeight: 0,
         display: "flex",
         flexDirection: "column",
         gap: 3,
@@ -32,9 +33,11 @@ export function DayCell({ date, cursor, tasks }: Props) {
         border: "1px solid var(--gray-200)",
         background: isOver ? "var(--brand-50)" : outside ? "var(--gray-50)" : "var(--gray-0)",
         transition: "background var(--motion-fast) var(--ease)",
+        overflow: "hidden",
+        boxSizing: "border-box",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 2px" }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 2px", flex: "0 0 auto" }}>
         <span
           style={{
             fontSize: "var(--text-xs)",
@@ -52,14 +55,16 @@ export function DayCell({ date, cursor, tasks }: Props) {
           {date.getDate()}
         </span>
       </div>
-      {visible.map((t) => (
-        <CalendarChip key={t.id} task={t} />
-      ))}
-      {extra > 0 && (
-        <span style={{ fontSize: "var(--text-xs)", color: "var(--gray-400)", paddingLeft: 2 }}>
-          +{extra} más
-        </span>
-      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 3, flex: 1, minHeight: 0, overflowY: "auto" }}>
+        {visible.map((t) => (
+          <CalendarChip key={t.id} task={t} />
+        ))}
+        {extra > 0 && (
+          <span style={{ fontSize: "var(--text-xs)", color: "var(--gray-400)", paddingLeft: 2 }}>
+            +{extra} más
+          </span>
+        )}
+      </div>
     </div>
   );
 }

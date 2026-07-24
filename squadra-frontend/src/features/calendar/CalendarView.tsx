@@ -139,8 +139,8 @@ export function CalendarView() {
             ))}
           </div>
 
-          {/* Grilla */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", flex: 1 }}>
+          {/* Grilla: filas de altura fija para que las tareas no deformen el calendario */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gridAutoRows: "112px" }}>
             {grid.map((d) => (
               <DayCell key={d.toISOString()} date={d} cursor={cursor} tasks={byDay.get(dayKey(d)) ?? []} />
             ))}
