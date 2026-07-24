@@ -11,6 +11,7 @@ import {
 } from "../../graphql/operations";
 import { Button, Card, Input } from "../../components/ui";
 import { InlineEdit } from "../list/InlineEdit";
+import { useIsMobile } from "../../lib/useIsMobile";
 
 interface Portfolio {
   id: string;
@@ -33,6 +34,7 @@ export function PortfoliosPage() {
   const [, setProjectPortfolio] = useMutation(SET_PROJECT_PORTFOLIO);
   const [, renamePortfolio] = useMutation(RENAME_PORTFOLIO);
   const [, deletePortfolio] = useMutation(DELETE_PORTFOLIO);
+  const isMobile = useIsMobile();
 
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState("");
@@ -124,15 +126,25 @@ export function PortfoliosPage() {
               <div style={{ padding: "var(--space-5)", color: "var(--gray-400)", fontSize: "var(--text-sm)" }}>Sin proyectos</div>
             ) : (
               g.projects.map((p) => (
-                <div key={p.id} style={{ display: "grid", gridTemplateColumns: "1fr 220px", gap: "var(--space-3)", alignItems: "center", padding: "var(--space-3) var(--space-4)", borderBottom: "1px solid var(--gray-100)" }}>
-                  <button type="button" onClick={() => navigate(`/projects/${p.id}/${VIEW_SLUG[p.defaultView] ?? "board"}`)} style={{ all: "unset", cursor: "pointer", display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "var(--text-md)", color: "var(--gray-900)", fontWeight: 500 }}>
-                    <span aria-hidden>📋</span> {p.name}
+                <div
+                  key={p.id}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: isMobile ? "1fr" : "1fr 220px",
+                    gap: "var(--space-2)",
+                    alignItems: isMobile ? "stretch" : "center",
+                    padding: "var(--space-3) var(--space-4)",
+                    borderBottom: "1px solid var(--gray-100)",
+                  }}
+                >
+                  <button type="button" onClick={() => navigate(`/projects/${p.id}/${VIEW_SLUG[p.defaultView] ?? "board"}`)} style={{ all: "unset", cursor: "pointer", display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "var(--text-md)", color: "var(--gray-900)", fontWeight: 500, minWidth: 0 }}>
+                    <span aria-hidden>📋</span> <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
                   </button>
                   <select
                     value={p.portfolioId ?? ""}
                     aria-label="Mover a portafolio"
                     onChange={(e) => onAssign(p.id, e.target.value)}
-                    style={{ height: 30, fontSize: "var(--text-sm)", border: "1px solid var(--gray-200)", borderRadius: "var(--radius-sm)", padding: "0 var(--space-2)", background: "var(--gray-0)", fontFamily: "inherit", cursor: "pointer" }}
+                    style={{ height: 30, fontSize: "var(--text-sm)", border: "1px solid var(--gray-200)", borderRadius: "var(--radius-sm)", padding: "0 var(--space-2)", background: "var(--gray-0)", fontFamily: "inherit", cursor: "pointer", width: isMobile ? "100%" : undefined }}
                   >
                     <option value="">Sin portafolio</option>
                     {portfolios.map((pf) => (

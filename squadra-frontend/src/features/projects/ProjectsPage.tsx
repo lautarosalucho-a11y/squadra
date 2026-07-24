@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "urql";
 import { CREATE_PROJECT_FOR_ME, DELETE_PROJECT, MY_PROJECTS, RENAME_PROJECT } from "../../graphql/operations";
 import { Button, Card, Input } from "../../components/ui";
 import { InlineEdit } from "../list/InlineEdit";
+import { useIsMobile } from "../../lib/useIsMobile";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -27,6 +28,7 @@ export function ProjectsPage() {
   const [{ fetching: creating }, createProject] = useMutation(CREATE_PROJECT_FOR_ME);
   const [, renameProject] = useMutation(RENAME_PROJECT);
   const [, deleteProject] = useMutation(DELETE_PROJECT);
+  const isMobile = useIsMobile();
 
   const [q, setQ] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -77,17 +79,50 @@ export function ProjectsPage() {
       </div>
 
       <div style={{ background: "var(--gray-0)", border: "1px solid var(--gray-200)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 160px 32px", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", borderBottom: "1px solid var(--gray-200)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: 0.3 }}>
-          <span>Nombre</span>
-          <span>Vista</span>
-          <span>Última modificación</span>
-          <span />
-        </div>
+        {!isMobile && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 160px 32px", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", borderBottom: "1px solid var(--gray-200)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: 0.3 }}>
+            <span>Nombre</span>
+            <span>Vista</span>
+            <span>Última modificación</span>
+            <span />
+          </div>
+        )}
 
         {fetching && !data ? (
           <Empty text="Cargando…" />
         ) : projects.length === 0 ? (
           <Empty text={q ? "Ningún proyecto coincide." : "Todavía no tenés proyectos. Creá el primero."} />
+        ) : isMobile ? (
+          projects.map((p) => (
+            <div key={p.id} style={{ padding: "var(--space-3) var(--space-4)", borderBottom: "1px solid var(--gray-100)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                <button
+                  type="button"
+                  aria-label="Abrir proyecto"
+                  title="Abrir proyecto"
+                  onClick={() => navigate(`/projects/${p.id}/${VIEW_SLUG[p.defaultView] ?? "board"}`)}
+                  style={{ all: "unset", cursor: "pointer", fontSize: "var(--text-md)" }}
+                >
+                  📋
+                </button>
+                <div style={{ minWidth: 0, flex: 1, fontSize: "var(--text-md)", color: "var(--gray-900)", fontWeight: 500 }}>
+                  <InlineEdit value={p.name} onCommit={(next) => onRename(p.id, next)} />
+                </div>
+                <button
+                  type="button"
+                  aria-label="Eliminar proyecto"
+                  title="Eliminar proyecto"
+                  onClick={() => onDelete(p.id, p.name)}
+                  style={{ all: "unset", cursor: "pointer", color: "var(--gray-400)", fontSize: 15, flex: "0 0 auto" }}
+                >
+                  🗑
+                </button>
+              </div>
+              <div style={{ fontSize: "var(--text-xs)", color: "var(--gray-400)", marginTop: "var(--space-1)", paddingLeft: 24, textTransform: "capitalize" }}>
+                {p.defaultView} · {formatDistanceToNow(new Date(p.updatedAt), { addSuffix: true, locale: es })}
+              </div>
+            </div>
+          ))
         ) : (
           projects.map((p) => (
             <div

@@ -4,13 +4,15 @@ import { MY_PROJECTS, MY_TASKS } from "../../graphql/operations";
 import { STATUS_LABELS, STATUS_ORDER, type Task } from "../../types";
 import { taskPanel } from "../comments/taskPanelStore";
 import { localNoon } from "../../lib/dateOnly";
+import { useIsMobile } from "../../lib/useIsMobile";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-/** Tablero de "Mis tareas": columnas por estado. */
+/** Tablero de "Mis tareas": columnas por estado (verticales y apiladas en mobile). */
 export function MyTasksBoard() {
   const [{ data }] = useQuery<{ myTasks: Task[] }>({ query: MY_TASKS });
   const [{ data: projData }] = useQuery<{ myProjects: { id: string; name: string }[] }>({ query: MY_PROJECTS });
+  const isMobile = useIsMobile();
 
   const tasks = useMemo(() => data?.myTasks ?? [], [data]);
   const projectName = useMemo(() => {
@@ -27,11 +29,17 @@ export function MyTasksBoard() {
   }, [tasks]);
 
   return (
-    <div style={{ display: "flex", gap: "var(--space-3)", overflowX: "auto", paddingBottom: "var(--space-2)" }}>
+    <div
+      style={
+        isMobile
+          ? { display: "flex", flexDirection: "column", gap: "var(--space-4)" }
+          : { display: "flex", gap: "var(--space-3)", overflowX: "auto", paddingBottom: "var(--space-2)" }
+      }
+    >
       {STATUS_ORDER.map((s) => {
         const items = byStatus.get(s) ?? [];
         return (
-          <div key={s} style={{ width: 260, flex: "0 0 260px" }}>
+          <div key={s} style={isMobile ? { width: "100%" } : { width: 260, flex: "0 0 260px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", padding: "0 var(--space-2) var(--space-2)" }}>
               <span style={{ fontSize: "var(--text-xs)", fontWeight: 600, padding: "2px var(--space-2)", borderRadius: "var(--radius-full)", background: `var(--status-${s}-bg)`, color: `var(--status-${s}-fg)` }}>
                 {STATUS_LABELS[s]}

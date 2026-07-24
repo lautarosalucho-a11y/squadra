@@ -5,7 +5,7 @@ import { Button } from "../../components/ui";
 interface Props {
   members: ProjectMember[];
   sending: boolean;
-  onSend: (text: string, mentions: string[]) => void;
+  onSend: (text: string, mentions: string[]) => Promise<boolean>;
 }
 
 /** Composer de comentario con autocompletado de @menciones. */
@@ -13,6 +13,7 @@ export function MentionComposer({ members, sending, onSend }: Props) {
   const [text, setText] = useState("");
   const [query, setQuery] = useState<string | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [error, setError] = useState<string | null>(null);
   const ref = useRef<HTMLTextAreaElement>(null);
 
   const matches = useMemo(() => {
@@ -49,16 +50,23 @@ export function MentionComposer({ members, sending, onSend }: Props) {
     });
   }
 
-  function send() {
+  async function send() {
     const body = text.trim();
     if (!body) return;
+    setError(null);
     // Solo menciones cuyo nombre sigue presente en el texto.
     const mentions = members
       .filter((m) => picked.has(m.id) && text.includes(`@${m.fullName}`))
       .map((m) => m.id);
-    onSend(body, mentions);
-    setText("");
-    setPicked(new Set());
+    const ok = await onSend(body, mentions);
+    // Solo limpiamos el borrador si el comentario realmente se guardó;
+    // si falló, lo dejamos escrito para que no se pierda y mostramos el error.
+    if (ok) {
+      setText("");
+      setPicked(new Set());
+    } else {
+      setError("No se pudo enviar el comentario. Probá de nuevo.");
+    }
   }
 
   return (
@@ -153,6 +161,11 @@ export function MentionComposer({ members, sending, onSend }: Props) {
           outline: "none",
         }}
       />
+      {error && (
+        <div style={{ fontSize: "var(--text-xs)", color: "var(--danger)", marginTop: "var(--space-2)" }}>
+          {error}
+        </div>
+      )}
       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-2)" }}>
         <Button size="sm" loading={sending} onClick={send}>
           Comentar

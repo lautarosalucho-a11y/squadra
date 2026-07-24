@@ -59,9 +59,11 @@ function Panel({ taskId, projectId }: { taskId: string; projectId: string }) {
     };
   }, [taskId, refetch]);
 
-  async function onSend(text: string, mentions: string[]) {
-    await addComment({ input: { taskId, body: { text, format: "markdown" }, mentions } });
+  async function onSend(text: string, mentions: string[]): Promise<boolean> {
+    const res = await addComment({ input: { taskId, body: { text, format: "markdown" }, mentions } });
+    if (res.error) return false;
     refetch({ requestPolicy: "network-only" });
+    return true;
   }
 
   return (

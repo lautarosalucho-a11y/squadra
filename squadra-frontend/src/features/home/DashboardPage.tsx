@@ -3,6 +3,7 @@ import { useQuery } from "urql";
 import { MY_PROJECTS, MY_TASKS } from "../../graphql/operations";
 import { STATUS_LABELS, STATUS_ORDER, type Task, type TaskStatus } from "../../types";
 import { localNoon } from "../../lib/dateOnly";
+import { useIsMobile } from "../../lib/useIsMobile";
 import { startOfDay } from "date-fns";
 
 const STATUS_COLOR: Record<TaskStatus, string> = {
@@ -25,6 +26,7 @@ export function DashboardPage() {
 export function DashboardBody() {
   const [{ data }] = useQuery<{ myTasks: Task[] }>({ query: MY_TASKS });
   const [{ data: projData }] = useQuery<{ myProjects: { id: string; name: string }[] }>({ query: MY_PROJECTS });
+  const isMobile = useIsMobile();
 
   const tasks = useMemo(() => data?.myTasks ?? [], [data]);
   const projectName = useMemo(() => {
@@ -71,15 +73,22 @@ export function DashboardBody() {
 
   return (
     <div>
-      {/* Métricas */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "var(--space-3)", marginBottom: "var(--space-5)" }}>
+      {/* Métricas: 2x2 en mobile (Finalizadas/Sin finalizar arriba, Con retraso/Total abajo) */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "var(--space-3)",
+          marginBottom: "var(--space-5)",
+        }}
+      >
         <Metric label="Finalizadas" value={stats.done} color="var(--success)" />
         <Metric label="Sin finalizar" value={stats.pending} color="var(--gray-700)" />
         <Metric label="Con retraso" value={stats.overdue} color="var(--danger)" />
         <Metric label="Tareas en total" value={stats.total} color="var(--brand-600)" />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "var(--space-4)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(320px, 1fr))", gap: "var(--space-4)" }}>
         {/* Donut por estado */}
         <Card title="Tareas por estado">
           {stats.total === 0 ? (
