@@ -1,16 +1,33 @@
-import { useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "urql";
-import { MY_PROJECTS, MY_TASKS, UPDATE_TASK } from "../../graphql/operations";
+import {
+  CREATE_TASK,
+  MY_PROJECTS,
+  MY_TASKS,
+  UPDATE_TASK,
+  WORKSPACE_MEMBERS,
+} from "../../graphql/operations";
 import type { Task, TaskStatus } from "../../types";
+import { Avatar } from "../../components/ui";
 import { format, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 
 interface TasksData {
   myTasks: Task[];
 }
-interface ProjectsData {
-  myProjects: { id: string; name: string }[];
+interface Project {
+  id: string;
+  name: string;
+  defaultView: string;
 }
+interface Member {
+  id: string;
+  fullName: string;
+  email: string;
+  avatarUrl?: string | null;
+}
+const VIEW_SLUG: Record<string, string> = { list: "list", board: "board", calendar: "calendar", gantt: "timeline" };
 
 type Tab = "upcoming" | "overdue" | "done";
 
@@ -23,9 +40,12 @@ function greeting(): string {
 }
 
 export function HomeView() {
+  const navigate = useNavigate();
   const [{ data }] = useQuery<TasksData>({ query: MY_TASKS });
-  const [{ data: projData }] = useQuery<ProjectsData>({ query: MY_PROJECTS });
+  const [{ data: projData }] = useQuery<{ myProjects: Project[] }>({ query: MY_PROJECTS });
+  const [{ data: memData }] = useQuery<{ workspaceMembers: Member[] }>({ query: WORKSPACE_MEMBERS });
   const [, updateTask] = useMutation(UPDATE_TASK);
+  const [, createTask] = useMutation(CREATE_TASK);
 
   const [tasks, setTasks] = useState<Task[]>([]);
   useEffect(() => {
@@ -33,12 +53,23 @@ export function HomeView() {
   }, [data]);
 
   const [tab, setTab] = useState<Tab>("upcoming");
+  const [quickTitle, setQuickTitle] = useState("");
 
+  const projects = useMemo(() => projData?.myProjects ?? [], [projData]);
+  const members = useMemo(() => memData?.workspaceMembers ?? [], [memData]);
   const projectName = useMemo(() => {
     const m = new Map<string, string>();
-    (projData?.myProjects ?? []).forEach((p) => m.set(p.id, p.name));
+    projects.forEach((p) => m.set(p.id, p.name));
     return m;
-  }, [projData]);
+  }, [projects]);
+
+  async function onQuickCreate(e: FormEvent) {
+    e.preventDefault();
+    const title = quickTitle.trim();
+    if (!title || projects.length === 0) return;
+    await createTask({ input: { projectId: projects[0].id, title } });
+    setQuickTitle("");
+  }
 
   const today = startOfDay(new Date());
   const buckets = useMemo(() => {
@@ -118,6 +149,19 @@ export function HomeView() {
           })}
         </div>
 
+        {projects.length > 0 && (
+          <form onSubmit={onQuickCreate} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-2) var(--space-5)", borderBottom: "1px solid var(--gray-100)" }}>
+            <span style={{ color: "var(--gray-400)" }}>＋</span>
+            <input
+              value={quickTitle}
+              placeholder="Crear tarea"
+              aria-label="Crear tarea"
+              onChange={(e) => setQuickTitle(e.target.value)}
+              style={{ flex: 1, height: 30, border: "none", outline: "none", background: "transparent", fontSize: "var(--text-md)", fontFamily: "inherit", color: "var(--gray-900)" }}
+            />
+          </form>
+        )}
+
         {current.length === 0 ? (
           <div style={{ padding: "var(--space-8)", textAlign: "center", color: "var(--gray-400)", fontSize: "var(--text-sm)" }}>
             {tab === "done" ? "Todavía no completaste tareas." : "Nada por acá 🎉"}
@@ -164,6 +208,69 @@ export function HomeView() {
           ))
         )}
       </div>
+
+      {/* Bloques inferiores: Proyectos + Personas */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "var(--space-4)", marginTop: "var(--space-5)" }}>
+        <Panel title="Proyectos">
+          <button type="button" onClick={() => navigate("/projects")} style={rowBtn}>
+            <span style={tileIcon}>＋</span>
+            <span style={{ fontWeight: 500 }}>Crear proyecto</span>
+          </button>
+          {projects.slice(0, 5).map((p) => (
+            <button key={p.id} type="button" onClick={() => navigate(`/projects/${p.id}/${VIEW_SLUG[p.defaultView] ?? "board"}`)} style={rowBtn}>
+              <span style={{ ...tileIcon, background: "var(--brand-50)", color: "var(--brand-700)" }}>▦</span>
+              <span>{p.name}</span>
+            </button>
+          ))}
+        </Panel>
+
+        <Panel title="Personas">
+          {members.map((m) => (
+            <div key={m.id} style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-2)" }}>
+              <Avatar name={m.fullName} src={m.avatarUrl} size="sm" />
+              <span style={{ fontSize: "var(--text-sm)", color: "var(--gray-900)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.fullName}</span>
+            </div>
+          ))}
+          <button type="button" onClick={() => navigate("/team")} style={rowBtn}>
+            <span style={tileIcon}>＋</span>
+            <span style={{ fontWeight: 500 }}>Invitar compañero</span>
+          </button>
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+const rowBtn: React.CSSProperties = {
+  all: "unset",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  gap: "var(--space-2)",
+  padding: "var(--space-2)",
+  borderRadius: "var(--radius-sm)",
+  fontSize: "var(--text-sm)",
+  color: "var(--gray-900)",
+  width: "100%",
+  boxSizing: "border-box",
+};
+const tileIcon: React.CSSProperties = {
+  width: 28,
+  height: 28,
+  borderRadius: "var(--radius-sm)",
+  background: "var(--gray-100)",
+  color: "var(--gray-600)",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flex: "0 0 auto",
+};
+
+function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ background: "var(--gray-0)", border: "1px solid var(--gray-200)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-xs)", padding: "var(--space-4)" }}>
+      <h2 style={{ fontSize: "var(--text-lg)", margin: "0 0 var(--space-3)" }}>{title}</h2>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>{children}</div>
     </div>
   );
 }
