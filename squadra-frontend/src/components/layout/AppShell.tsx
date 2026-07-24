@@ -137,6 +137,22 @@ export function AppShell({ children }: { children: ReactNode }) {
         </button>
         <button
           type="button"
+          onClick={() => navigate("/dashboard")}
+          style={{
+            all: "unset",
+            cursor: "pointer",
+            padding: "var(--space-2)",
+            borderRadius: "var(--radius-sm)",
+            fontSize: "var(--text-sm)",
+            fontWeight: location.pathname === "/dashboard" ? 600 : 400,
+            background: location.pathname === "/dashboard" ? "var(--brand-50)" : "transparent",
+            color: location.pathname === "/dashboard" ? "var(--brand-700)" : "var(--gray-900)",
+          }}
+        >
+          📊 Panel
+        </button>
+        <button
+          type="button"
           onClick={() => navigate("/goals")}
           style={{
             all: "unset",

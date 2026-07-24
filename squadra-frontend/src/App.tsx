@@ -8,6 +8,7 @@ import { CalendarView } from "./features/calendar/CalendarView";
 import { GanttView } from "./features/gantt/GanttView";
 import { HomeView } from "./features/home/HomeView";
 import { MyTasksPage } from "./features/home/MyTasksPage";
+import { DashboardPage } from "./features/home/DashboardPage";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
 import { PortfoliosPage } from "./features/projects/PortfoliosPage";
 import { GoalsPage } from "./features/goals/GoalsPage";
@@ -47,6 +48,16 @@ export function App() {
           <ProtectedRoute>
             <AppShell>
               <MyTasksPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <DashboardPage />
             </AppShell>
           </ProtectedRoute>
         }
