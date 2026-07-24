@@ -121,6 +121,22 @@ export function AppShell({ children }: { children: ReactNode }) {
         </button>
         <button
           type="button"
+          onClick={() => navigate("/my-tasks")}
+          style={{
+            all: "unset",
+            cursor: "pointer",
+            padding: "var(--space-2)",
+            borderRadius: "var(--radius-sm)",
+            fontSize: "var(--text-sm)",
+            fontWeight: location.pathname === "/my-tasks" ? 600 : 400,
+            background: location.pathname === "/my-tasks" ? "var(--brand-50)" : "transparent",
+            color: location.pathname === "/my-tasks" ? "var(--brand-700)" : "var(--gray-900)",
+          }}
+        >
+          ✓ Mis tareas
+        </button>
+        <button
+          type="button"
           onClick={() => navigate("/goals")}
           style={{
             all: "unset",

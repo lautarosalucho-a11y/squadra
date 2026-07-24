@@ -7,6 +7,7 @@ import { ListView } from "./features/list/ListView";
 import { CalendarView } from "./features/calendar/CalendarView";
 import { GanttView } from "./features/gantt/GanttView";
 import { HomeView } from "./features/home/HomeView";
+import { MyTasksPage } from "./features/home/MyTasksPage";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
 import { PortfoliosPage } from "./features/projects/PortfoliosPage";
 import { GoalsPage } from "./features/goals/GoalsPage";
@@ -36,6 +37,16 @@ export function App() {
           <ProtectedRoute>
             <AppShell>
               <ProjectsPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/my-tasks"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <MyTasksPage />
             </AppShell>
           </ProtectedRoute>
         }
