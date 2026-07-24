@@ -1,7 +1,9 @@
 import { type FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery } from "urql";
-import { INVITE_MEMBER, WORKSPACE_MEMBERS } from "../../graphql/operations";
+import { INVITE_MEMBER, REMOVE_MEMBER, UPDATE_MEMBER, WORKSPACE_MEMBERS } from "../../graphql/operations";
 import { Avatar, Button, Card, Input } from "../../components/ui";
+import { InlineEdit } from "../list/InlineEdit";
+import { auth } from "../../lib/auth";
 
 interface Member {
   id: string;
@@ -15,6 +17,8 @@ export function TeamPage() {
     query: WORKSPACE_MEMBERS,
   });
   const [{ fetching: inviting }, invite] = useMutation(INVITE_MEMBER);
+  const [, updateMember] = useMutation(UPDATE_MEMBER);
+  const [, removeMember] = useMutation(REMOVE_MEMBER);
 
   const [showModal, setShowModal] = useState(false);
   const [email, setEmail] = useState("");
@@ -22,8 +26,26 @@ export function TeamPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<{ email: string; password: string } | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   const members = useMemo(() => data?.workspaceMembers ?? [], [data]);
+  const myId = auth.getUserId();
+
+  async function onRename(userId: string, name: string) {
+    await updateMember({ userId, fullName: name });
+    refetch({ requestPolicy: "network-only" });
+  }
+
+  async function onRemove(userId: string, name: string) {
+    if (!window.confirm(`¿Quitar a ${name} del equipo? No se borra su cuenta, solo pierde acceso.`)) return;
+    setRemoveError(null);
+    const res = await removeMember({ userId });
+    if (res.error) {
+      setRemoveError("No se pudo quitar a esa persona.");
+      return;
+    }
+    refetch({ requestPolicy: "network-only" });
+  }
 
   async function onInvite(e: FormEvent) {
     e.preventDefault();
@@ -57,9 +79,10 @@ export function TeamPage() {
           <Button onClick={() => setShowModal(true)}>+ Agregar miembro</Button>
         </div>
       </div>
-      <div style={{ fontSize: "var(--text-sm)", color: "var(--gray-600)", marginBottom: "var(--space-6)" }}>
+      <div style={{ fontSize: "var(--text-sm)", color: "var(--gray-600)", marginBottom: "var(--space-2)" }}>
         {members.length} {members.length === 1 ? "miembro" : "miembros"} en tu equipo
       </div>
+      {removeError && <div style={{ fontSize: "var(--text-xs)", color: "var(--danger)", marginBottom: "var(--space-2)" }}>{removeError}</div>}
 
       <div style={{ background: "var(--gray-0)", border: "1px solid var(--gray-200)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
         {fetching && !data ? (
@@ -70,10 +93,23 @@ export function TeamPage() {
           members.map((m) => (
             <div key={m.id} style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", borderBottom: "1px solid var(--gray-100)" }}>
               <Avatar name={m.fullName} src={m.avatarUrl} size="md" />
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: "var(--text-md)", fontWeight: 500, color: "var(--gray-900)" }}>{m.fullName}</div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: "var(--text-md)", fontWeight: 500, color: "var(--gray-900)" }}>
+                  <InlineEdit value={m.fullName} onCommit={(name) => onRename(m.id, name)} />
+                </div>
                 <div style={{ fontSize: "var(--text-sm)", color: "var(--gray-400)" }}>{m.email}</div>
               </div>
+              {m.id !== myId && (
+                <button
+                  type="button"
+                  aria-label="Quitar del equipo"
+                  title="Quitar del equipo"
+                  onClick={() => onRemove(m.id, m.fullName)}
+                  style={{ all: "unset", cursor: "pointer", color: "var(--gray-400)", fontSize: 16, padding: "var(--space-1)" }}
+                >
+                  🗑
+                </button>
+              )}
             </div>
           ))
         )}

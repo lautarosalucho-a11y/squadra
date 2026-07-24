@@ -104,6 +104,38 @@ export class AuthService {
     };
   }
 
+  /** Renombra a un miembro del equipo del actor. */
+  async updateMemberName(actorId: string, userId: string, fullName: string) {
+    const workspaceId = await this.resolveWorkspace(actorId);
+    const membership = await this.prisma.membership.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId } },
+    });
+    if (!membership) throw new ConflictException('Esa persona no pertenece a tu equipo');
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { fullName },
+    });
+  }
+
+  /**
+   * Quita a un miembro del equipo del actor (borra su membership, no la
+   * cuenta en sí). No permite que alguien se elimine a sí mismo.
+   */
+  async removeMember(actorId: string, userId: string) {
+    if (actorId === userId) {
+      throw new ConflictException('No podés eliminarte a vos mismo del equipo');
+    }
+    const workspaceId = await this.resolveWorkspace(actorId);
+    const membership = await this.prisma.membership.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId } },
+    });
+    if (!membership) throw new ConflictException('Esa persona no pertenece a tu equipo');
+    await this.prisma.membership.delete({
+      where: { workspaceId_userId: { workspaceId, userId } },
+    });
+    return true;
+  }
+
   async login(input: LoginInput) {
     const user = await this.prisma.user.findUnique({
       where: { email: input.email },

@@ -3,11 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "urql";
 import {
   CREATE_PORTFOLIO_FOR_ME,
+  DELETE_PORTFOLIO,
   MY_PORTFOLIOS,
   MY_PROJECTS,
+  RENAME_PORTFOLIO,
   SET_PROJECT_PORTFOLIO,
 } from "../../graphql/operations";
 import { Button, Card, Input } from "../../components/ui";
+import { InlineEdit } from "../list/InlineEdit";
 
 interface Portfolio {
   id: string;
@@ -28,6 +31,8 @@ export function PortfoliosPage() {
   const [{ data: projData }, refetchProj] = useQuery<{ myProjects: Project[] }>({ query: MY_PROJECTS });
   const [{ fetching: creating }, createPortfolio] = useMutation(CREATE_PORTFOLIO_FOR_ME);
   const [, setProjectPortfolio] = useMutation(SET_PROJECT_PORTFOLIO);
+  const [, renamePortfolio] = useMutation(RENAME_PORTFOLIO);
+  const [, deletePortfolio] = useMutation(DELETE_PORTFOLIO);
 
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState("");
@@ -61,6 +66,20 @@ export function PortfoliosPage() {
     refetchProj({ requestPolicy: "network-only" });
   }
 
+  async function onRenamePortfolio(id: string, next: string) {
+    await renamePortfolio({ id, name: next });
+    refetchPf({ requestPolicy: "network-only" });
+  }
+
+  async function onDeletePortfolio(id: string, portfolioName: string) {
+    if (!window.confirm(`¿Eliminar el portafolio "${portfolioName}"? Los proyectos quedan sin portafolio.`)) return;
+    const res = await deletePortfolio({ id });
+    if (!res.error) {
+      refetchPf({ requestPolicy: "network-only" });
+      refetchProj({ requestPolicy: "network-only" });
+    }
+  }
+
   const groups: { id: string | null; name: string; projects: Project[] }[] = [
     ...portfolios.map((pf) => ({ id: pf.id, name: pf.name, projects: byPortfolio.get(pf.id) ?? [] })),
     { id: null, name: "Sin portafolio", projects: byPortfolio.get(null) ?? [] },
@@ -79,8 +98,25 @@ export function PortfoliosPage() {
         <section key={g.id ?? "__none__"} style={{ marginBottom: "var(--space-6)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
             <span aria-hidden>🗂</span>
-            <h2 style={{ fontSize: "var(--text-lg)", margin: 0 }}>{g.name}</h2>
+            {g.id ? (
+              <div style={{ fontSize: "var(--text-lg)", fontWeight: 600, minWidth: 120 }}>
+                <InlineEdit value={g.name} onCommit={(next) => onRenamePortfolio(g.id!, next)} />
+              </div>
+            ) : (
+              <h2 style={{ fontSize: "var(--text-lg)", margin: 0 }}>{g.name}</h2>
+            )}
             <span style={{ fontSize: "var(--text-sm)", color: "var(--gray-400)" }}>{g.projects.length}</span>
+            {g.id && (
+              <button
+                type="button"
+                aria-label="Eliminar portafolio"
+                title="Eliminar portafolio"
+                onClick={() => onDeletePortfolio(g.id!, g.name)}
+                style={{ all: "unset", cursor: "pointer", marginLeft: "auto", color: "var(--gray-400)", fontSize: 15 }}
+              >
+                🗑
+              </button>
+            )}
           </div>
 
           <div style={{ background: "var(--gray-0)", border: "1px solid var(--gray-200)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>

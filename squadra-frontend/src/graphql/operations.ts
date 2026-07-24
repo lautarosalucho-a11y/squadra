@@ -281,6 +281,21 @@ export const CREATE_PROJECT_FOR_ME = /* GraphQL */ `
   }
 `;
 
+export const RENAME_PROJECT = /* GraphQL */ `
+  mutation RenameProject($id: ID!, $name: String!) {
+    renameProject(id: $id, name: $name) {
+      id
+      name
+    }
+  }
+`;
+
+export const DELETE_PROJECT = /* GraphQL */ `
+  mutation DeleteProject($id: ID!) {
+    deleteProject(id: $id)
+  }
+`;
+
 /** Objetivos (Estrategia) del usuario. */
 export const MY_GOALS = /* GraphQL */ `
   query MyGoals {
@@ -346,6 +361,21 @@ export const SET_PROJECT_PORTFOLIO = /* GraphQL */ `
       id
       portfolioId
     }
+  }
+`;
+
+export const RENAME_PORTFOLIO = /* GraphQL */ `
+  mutation RenamePortfolio($id: ID!, $name: String!) {
+    renamePortfolio(id: $id, name: $name) {
+      id
+      name
+    }
+  }
+`;
+
+export const DELETE_PORTFOLIO = /* GraphQL */ `
+  mutation DeletePortfolio($id: ID!) {
+    deletePortfolio(id: $id)
   }
 `;
 
@@ -417,6 +447,21 @@ export const INVITE_MEMBER = /* GraphQL */ `
       fullName
       email
     }
+  }
+`;
+
+export const UPDATE_MEMBER = /* GraphQL */ `
+  mutation UpdateMember($userId: ID!, $fullName: String!) {
+    updateMember(userId: $userId, fullName: $fullName) {
+      id
+      fullName
+    }
+  }
+`;
+
+export const REMOVE_MEMBER = /* GraphQL */ `
+  mutation RemoveMember($userId: ID!) {
+    removeMember(userId: $userId)
   }
 `;
 

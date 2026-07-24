@@ -73,6 +73,37 @@ export class ProjectsService {
     });
   }
 
+  /** Renombra un portafolio. */
+  async renamePortfolio(id: string, name: string) {
+    await this.ensurePortfolioExists(id);
+    return this.prisma.portfolio.update({
+      where: { id },
+      data: { name, version: { increment: 1 } },
+    });
+  }
+
+  /** Elimina (soft delete) un portafolio; los proyectos quedan sin portafolio. */
+  async deletePortfolio(id: string) {
+    await this.ensurePortfolioExists(id);
+    await this.prisma.project.updateMany({
+      where: { portfolioId: id },
+      data: { portfolioId: null },
+    });
+    await this.prisma.portfolio.update({
+      where: { id },
+      data: { deletedAt: new Date(), version: { increment: 1 } },
+    });
+    return true;
+  }
+
+  private async ensurePortfolioExists(id: string) {
+    const p = await this.prisma.portfolio.findFirst({
+      where: { id, deletedAt: null },
+      select: { id: true },
+    });
+    if (!p) throw new NotFoundException('Portafolio no encontrado');
+  }
+
   /** Crea un proyecto en el workspace del usuario (home o su primer membership). */
   async createForUser(userId: string, name: string) {
     const workspaceId = await this.resolveWorkspace(userId);
@@ -89,8 +120,17 @@ export class ProjectsService {
     });
     const workspaceIds = memberships.map((m: { workspaceId: string }) => m.workspaceId);
     return this.prisma.project.findMany({
-      where: { workspaceId: { in: workspaceIds }, archived: false },
+      where: { workspaceId: { in: workspaceIds }, archived: false, deletedAt: null },
       orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  /** Renombra un proyecto (atajo simple para la UI). */
+  async renameProject(id: string, name: string) {
+    await this.ensureExists(id);
+    return this.prisma.project.update({
+      where: { id },
+      data: { name, version: { increment: 1 } },
     });
   }
 

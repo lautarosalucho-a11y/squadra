@@ -1,8 +1,9 @@
 import { type FormEvent, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "urql";
-import { CREATE_PROJECT_FOR_ME, MY_PROJECTS } from "../../graphql/operations";
+import { CREATE_PROJECT_FOR_ME, DELETE_PROJECT, MY_PROJECTS, RENAME_PROJECT } from "../../graphql/operations";
 import { Button, Card, Input } from "../../components/ui";
+import { InlineEdit } from "../list/InlineEdit";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -24,6 +25,8 @@ export function ProjectsPage() {
   const navigate = useNavigate();
   const [{ data, fetching }, refetch] = useQuery<{ myProjects: Project[] }>({ query: MY_PROJECTS });
   const [{ fetching: creating }, createProject] = useMutation(CREATE_PROJECT_FOR_ME);
+  const [, renameProject] = useMutation(RENAME_PROJECT);
+  const [, deleteProject] = useMutation(DELETE_PROJECT);
 
   const [q, setQ] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -49,6 +52,17 @@ export function ProjectsPage() {
     }
   }
 
+  async function onRename(id: string, next: string) {
+    await renameProject({ id, name: next });
+    refetch({ requestPolicy: "network-only" });
+  }
+
+  async function onDelete(id: string, projectName: string) {
+    if (!window.confirm(`¿Eliminar el proyecto "${projectName}"? Esta acción no se puede deshacer.`)) return;
+    const res = await deleteProject({ id });
+    if (!res.error) refetch({ requestPolicy: "network-only" });
+  }
+
   return (
     <div style={{ padding: "var(--space-8) var(--space-6)", maxWidth: 1000, margin: "0 auto" }}>
       <div style={{ display: "flex", alignItems: "center", marginBottom: "var(--space-5)" }}>
@@ -63,10 +77,11 @@ export function ProjectsPage() {
       </div>
 
       <div style={{ background: "var(--gray-0)", border: "1px solid var(--gray-200)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 160px", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", borderBottom: "1px solid var(--gray-200)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: 0.3 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 160px 32px", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", borderBottom: "1px solid var(--gray-200)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: 0.3 }}>
           <span>Nombre</span>
           <span>Vista</span>
           <span>Última modificación</span>
+          <span />
         </div>
 
         {fetching && !data ? (
@@ -75,31 +90,45 @@ export function ProjectsPage() {
           <Empty text={q ? "Ningún proyecto coincide." : "Todavía no tenés proyectos. Creá el primero."} />
         ) : (
           projects.map((p) => (
-            <button
+            <div
               key={p.id}
-              type="button"
-              onClick={() => navigate(`/projects/${p.id}/${VIEW_SLUG[p.defaultView] ?? "board"}`)}
               style={{
-                all: "unset",
-                cursor: "pointer",
                 display: "grid",
-                gridTemplateColumns: "1fr 120px 160px",
+                gridTemplateColumns: "1fr 120px 160px 32px",
                 gap: "var(--space-3)",
                 alignItems: "center",
                 padding: "var(--space-3) var(--space-4)",
                 borderBottom: "1px solid var(--gray-100)",
-                width: "100%",
-                boxSizing: "border-box",
               }}
             >
-              <span style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "var(--text-md)", color: "var(--gray-900)", fontWeight: 500 }}>
-                <span aria-hidden>📋</span> {p.name}
+              <span style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", minWidth: 0 }}>
+                <button
+                  type="button"
+                  aria-label="Abrir proyecto"
+                  title="Abrir proyecto"
+                  onClick={() => navigate(`/projects/${p.id}/${VIEW_SLUG[p.defaultView] ?? "board"}`)}
+                  style={{ all: "unset", cursor: "pointer", fontSize: "var(--text-md)" }}
+                >
+                  📋
+                </button>
+                <div style={{ minWidth: 0, flex: 1, fontSize: "var(--text-md)", color: "var(--gray-900)", fontWeight: 500 }}>
+                  <InlineEdit value={p.name} onCommit={(next) => onRename(p.id, next)} />
+                </div>
               </span>
               <span style={{ fontSize: "var(--text-sm)", color: "var(--gray-600)", textTransform: "capitalize" }}>{p.defaultView}</span>
               <span style={{ fontSize: "var(--text-sm)", color: "var(--gray-400)" }}>
                 {formatDistanceToNow(new Date(p.updatedAt), { addSuffix: true, locale: es })}
               </span>
-            </button>
+              <button
+                type="button"
+                aria-label="Eliminar proyecto"
+                title="Eliminar proyecto"
+                onClick={() => onDelete(p.id, p.name)}
+                style={{ all: "unset", cursor: "pointer", color: "var(--gray-400)", fontSize: 15 }}
+              >
+                🗑
+              </button>
+            </div>
           ))
         )}
       </div>

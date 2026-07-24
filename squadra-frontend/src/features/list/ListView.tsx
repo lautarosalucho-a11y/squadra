@@ -492,7 +492,7 @@ function Row({ task, depth, ctx, sortable }: { task: Task; depth: number; ctx: R
                   aria-label="Adjuntar archivo"
                   title={(m?.attachmentCount ?? 0) > 0 ? `${m?.attachmentCount} archivo(s)` : "Adjuntar archivo"}
                   onClick={() => fileRef.current?.click()}
-                  style={{ all: "unset", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 2, fontSize: 13, color: (m?.attachmentCount ?? 0) > 0 ? "var(--brand-600)" : "var(--gray-400)", visibility: (m?.attachmentCount ?? 0) > 0 || hover ? "visible" : "hidden" }}
+                  style={{ all: "unset", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 2, fontSize: 13, color: (m?.attachmentCount ?? 0) > 0 ? "var(--brand-600)" : "var(--gray-400)" }}
                 >
                   📎{(m?.attachmentCount ?? 0) > 0 && <span style={{ fontSize: 11, fontWeight: 600 }}>{m?.attachmentCount}</span>}
                 </button>
@@ -501,7 +501,7 @@ function Row({ task, depth, ctx, sortable }: { task: Task; depth: number; ctx: R
                   aria-label="Comentarios"
                   title="Comentarios"
                   onClick={() => ctx.onOpenComments(task.id)}
-                  style={{ all: "unset", cursor: "pointer", position: "relative", fontSize: 13, color: (m?.commentCount ?? 0) > 0 ? "var(--gray-600)" : "var(--gray-400)", visibility: (m?.commentCount ?? 0) > 0 || (m?.unreadCommentCount ?? 0) > 0 || hover ? "visible" : "hidden" }}
+                  style={{ all: "unset", cursor: "pointer", position: "relative", fontSize: 13, color: (m?.commentCount ?? 0) > 0 ? "var(--gray-600)" : "var(--gray-400)" }}
                 >
                   💬
                   {(m?.unreadCommentCount ?? 0) > 0 && (

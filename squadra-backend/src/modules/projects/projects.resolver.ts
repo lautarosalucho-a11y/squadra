@@ -100,6 +100,28 @@ export class ProjectsResolver {
     return this.projects.softDelete(id);
   }
 
+  /** Renombra un proyecto (atajo simple para la página de Proyectos). */
+  @Mutation(() => Project)
+  renameProject(
+    @Args('id', { type: () => ID }) id: string,
+    @Args('name') name: string,
+  ) {
+    return this.projects.renameProject(id, name);
+  }
+
+  @Mutation(() => Portfolio)
+  renamePortfolio(
+    @Args('id', { type: () => ID }) id: string,
+    @Args('name') name: string,
+  ) {
+    return this.projects.renamePortfolio(id, name);
+  }
+
+  @Mutation(() => Boolean)
+  deletePortfolio(@Args('id', { type: () => ID }) id: string) {
+    return this.projects.deletePortfolio(id);
+  }
+
   @Mutation(() => Section)
   createSection(@Args('input') input: CreateSectionInput) {
     return this.projects.createSection(input);

@@ -1,4 +1,4 @@
-import { Resolver, Mutation, Query, Args } from '@nestjs/graphql';
+import { Resolver, Mutation, Query, Args, ID } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthPayload } from './models/auth-payload.model';
@@ -56,5 +56,26 @@ export class AuthResolver {
     @CurrentUser() user: AuthUser,
   ) {
     return this.auth.inviteMember(user.userId, email, fullName, password);
+  }
+
+  /** Renombra a un miembro del equipo. */
+  @Mutation(() => UserModel)
+  @UseGuards(GqlAuthGuard)
+  updateMember(
+    @Args('userId', { type: () => ID }) userId: string,
+    @Args('fullName') fullName: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.auth.updateMemberName(user.userId, userId, fullName);
+  }
+
+  /** Quita a un miembro del equipo (no borra su cuenta). */
+  @Mutation(() => Boolean)
+  @UseGuards(GqlAuthGuard)
+  removeMember(
+    @Args('userId', { type: () => ID }) userId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.auth.removeMember(user.userId, userId);
   }
 }
